@@ -167,7 +167,19 @@
           + '\n\nIndirizzo: ' + location.href
           + '\n\nFotografa questa schermata.';
         (document.body || document.documentElement).appendChild(d);
-      }, 4000);   // largo: da file:// il caricamento e' piu' lento, e un falso allarme sarebbe peggio
+        // ⚠️ E SE IL GIOCO PARTE DOPO? Questa schermata e' comparsa in un browser lento mentre il
+        // gioco stava ancora caricando, e non se ne andava piu': su un telefono vecchio un
+        // giocatore vedrebbe "NON E' PARTITO" sopra un gioco che funziona benissimo. Trovato
+        // facendo uno screenshot col browser invisibile (2026-08-21).
+        // Quindi si continua a guardare, e appena una scena e' viva ci si toglie di mezzo.
+        var vigila = setInterval(function () {
+          var gg = window.game;
+          if (gg && gg.scene && gg.scene.scenes && gg.scene.scenes.some(function (sc) {
+            return sc.scene.isActive() && sc.scene.key !== 'BootScene';
+          })) { clearInterval(vigila); if (d.parentNode) d.parentNode.removeChild(d); }
+        }, 700);
+      }, 12000);   // ⚠️ LARGO: su un telefono lento il caricamento puo' superare i dieci secondi,
+                   // e un falso allarme e' peggio di un allarme tardivo.
     })();
   </script>
 </body>

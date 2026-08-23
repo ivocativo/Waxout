@@ -87,7 +87,53 @@ window.CONFIG = {
   // gesto A PARTE con una ricarica lunga, cosi' resta un momento e non un'abitudine.
   BOMBA_RICARICA: 30000,  // ms di GIOCO fra una bomba e l'altra (menu e pause non contano)
   BOMBA_DANNO: 4,         // quante volte il danno del corpo a corpo, su tutto lo schermo
-  BOMBA_ONDA: 520,        // ms che l'onda impiega ad attraversare lo schermo
+  BOMBA_ONDA: 520,
+  // Quanto danno di un leggendario arriva ai BOSS. ⚠️ Ridotto e non azzerato: la bomba non li
+  // tocca affatto (era troppo forte contro di loro), ma gli altri quattro colpiscono un bersaglio
+  // alla volta, e renderli inerti sul boss vorrebbe dire consegnare al giocatore un tasto che
+  // proprio quando serve non fa niente. Uno sconto secco e' onesto in tutte e due le direzioni.
+  DANNO_BOSS_LEGG: 0.35,
+
+  // GLI ALTRI LEGGENDARI (2026-08-23). Tutti sullo STESSO tasto: se ne equipaggia uno per run
+  // (vedi ARSENALE), quindi non c'e' mai da scegliere fra due poteri col pollice.
+  // ⚠️ Le ricariche sono in TEMPO DI GIOCO (GameState.tempoDiGioco): il cronometro della scena
+  // riparte a ogni livello, e usarlo regalerebbe un potere pronto all'inizio di ognuno.
+
+  // GRANATE: le uniche a MUNIZIONI invece che a tempo (scelta dell'utente): tre per run, e a
+  // fine livello se ne recupera una. Cosi' si pensa a QUANDO usarle, non ad aspettare.
+  GRANATE_MAX: 3,
+  GRANATA_DANNO: 3.2,        // moltiplicatore sul danno corpo a corpo, nel raggio
+  GRANATA_RAGGIO: 150,
+  GRANATA_MICCIA: 900,       // ms prima dello scoppio (rotola: si puo' anticiparne l'arrivo)
+  GRANATA_PAUSA: 500,        // ms fra un lancio e l'altro, solo per non buttarle tutte insieme
+
+  // LASER: un raggio che attraversa TUTTO in linea retta. Non insegue e non curva: e' un colpo
+  // da preparare mettendosi in fila con i nemici, ed e' quello che lo rende diverso dal getto.
+  LASER_RICARICA: 12000,
+  LASER_DANNO: 5,            // moltiplicatore sul danno corpo a corpo (colpisce una volta sola)
+  LASER_DURATA: 420,         // ms di permanenza a schermo del fascio
+  LASER_SPESSORE: 26,        // altezza della fascia colpita
+
+  // TRAPANO: una carica in avanti che perfora nemici E cerume.
+  // ⚠️ TASTO TUTTO SUO, non incollato allo scatto (decisione dell'utente 2026-08-22): lo scatto
+  // ha gia' un potenziamento che fa danno, e sommare le due cose avrebbe reso impossibile
+  // capire quale delle due stava facendo cosa.
+  TRAPANO_RICARICA: 9000,
+  TRAPANO_DANNO: 2.2,        // moltiplicatore, applicato ogni TRAPANO_TIC a chi si attraversa
+  TRAPANO_TIC: 140,
+  TRAPANO_VEL: 620,
+  TRAPANO_DURATA: 420,       // ms di carica
+
+  // RAZZO: parte dove miri e CURVA verso il bersaglio piu' vicino dentro un cono davanti a se'.
+  // ⚠️ Il cono e' stretto apposta: un razzo che insegue chiunque toglierebbe la mira di mano al
+  // giocatore, e un leggendario che gioca da solo non e' un giocattolo.
+  RAZZO_RICARICA: 7000,
+  RAZZO_DANNO: 3.5,          // moltiplicatore, nel raggio dello scoppio
+  RAZZO_RAGGIO: 120,
+  RAZZO_VEL: 430,
+  RAZZO_CONO: 0.55,          // radianti di semiapertura del cono di ricerca (~31 gradi)
+  RAZZO_CURVA: 3.2,          // radianti al secondo di correzione: curva, non fa inversioni
+  RAZZO_VITA: 2600,          // ms prima di spegnersi da solo        // ms che l'onda impiega ad attraversare lo schermo
   RADIALE_OGNI: 2600,     // ms fra una raffica e l'altra
   RADIALE_DANNO: 0.55,    // quanto vale una pallina radiale rispetto a una del getto
   RADIALE_PER_PESCA: 4,   // quante direzioni aggiunge ogni carta pescata
@@ -110,6 +156,17 @@ window.CONFIG = {
   // ASSEDIO (2026-07-31): tempo scaduto senza quota = una botta e un supplementare, non la
   // fine della partita. La penalita' e' una FRAZIONE della vita massima, non un numero fisso,
   // cosi' resta significativa anche a chi ha comprato tanti Cuori Extra.
+  // VALANGA DELL'ASSEDIO (2026-08-21). Quanta parte del condotto copre nel tempo dell'assedio:
+  // con 0,8 arriva all'80% e resta sempre un pezzo di strada davanti, quindi non ti mette mai
+  // con le spalle al muro. ⚠️ Si esprime in FRAZIONE e non in pixel al secondo apposta: cosi'
+  // si adatta da sola ai livelli lunghi, a quelli corti e ai tempi supplementari.
+  // ⚠️ ABBASSATA da 0,8 a 0,5 dopo la prova dell'utente ("un filo troppo veloce"): ora copre
+  // meta' del condotto nel tempo dell'assedio, cioe' ~45 px/s contro i 220 del giocatore.
+  VALANGA_QUOTA: 0.5,
+  VALANGA_DANNO: 0.05,    // frazione della vita massima persa a ogni tic dentro la nebbia
+  VALANGA_TIC: 900,       // ms fra un tic di danno e l'altro (e' un veleno, non una botta)
+  VALANGA_BATUFFOLI: 34,  // quanti batuffoli compongono la nebbia
+  VALANGA_SPORE: 26,      // puntini che galleggiano dentro la nebbia
   SIEGE_PENALITA: 0.2,
   SIEGE_SUPPLEMENTARE: 15000,
   CURA_PICKUP: 14,
@@ -224,8 +281,16 @@ window.BLUEPRINTS = {
 // bilanciamento): un MODO DIVERSO di combattere, non "piu' danno". In questo gioco la cadenza
 // domina, quindi un leggendario che tocca i numeri e' un potenziamento come gli altri; uno che
 // cambia comportamento e' un giocattolo nuovo.
+// ⚠️ UNO SOLO PER RUN (decisione dell'utente 2026-08-22). Si comprano per sempre, ma se ne porta
+// in campo uno alla volta: e' quello che li tiene diversi fra loro invece di farli diventare una
+// collezione di tasti da premere tutti insieme. La scelta si fa nell'Arsenale.
+// `infezione` = grado da SUPERARE per vederlo; `icona` = come lo disegna il pulsante (src/touch.js).
 window.LEGGENDARI = {
-  bomba: { cost: 1980, ability: 'bomba', infezione: 0 },
+  bomba:   { cost: 1980, ability: 'bomba',   infezione: 0, icona: 'bomba' },
+  granata: { cost: 2420, ability: 'granata', infezione: 1, icona: 'granata' },
+  laser:   { cost: 2860, ability: 'laser',   infezione: 2, icona: 'laser' },
+  trapano: { cost: 3300, ability: 'trapano', infezione: 3, icona: 'trapano' },
+  razzo:   { cost: 3740, ability: 'razzo',   infezione: 4, icona: 'razzo' },
 };
 
 // ARSENALE (2026-07-27, richiesta dell'utente). Ogni "arma" e' in realta' un KIT COMPLETO:
@@ -409,9 +474,12 @@ window.GameState = {
       shotCooldown: G.cadenza,   // ms tra uno spruzzo e l'altro
       shotLife: G.gittata,       // ms di vita di una pallina = quanto lontano arriva il getto
       doubleJump: lv('djump') > 0,
-      // LEGGENDARIO: la Bomba di Cerume. Comprata una volta, vale per tutte le run — come i
-      // progetti. Il numero di usi non e' limitato: e' la ricarica a tenerla rara.
-      bomba: window.Meta.unlockLevel('bomba') > 0,
+      // LEGGENDARIO IN DOTAZIONE: l'id scelto nell'Arsenale, o null se non se ne possiede
+      // nessuno. Comprati una volta valgono per tutte le run — come i progetti — ma in campo ne
+      // viene uno solo. ⚠️ Si passa da Meta.leggendarioEquipaggiato e non da state.leggendario
+      // grezzo: quello controlla anche che sia ancora posseduto (un salvataggio vecchio o un
+      // azzeramento potrebbero indicare un leggendario che non c'e' piu').
+      leggendario: window.Meta.leggendarioEquipaggiato(),
       dash: false,
       weapon: 'swab',        // (storico) resta per compatibilita': la texture ora viene dal kit
       // Abilità di run (scelte all'UpgradeScene) che cambiano lo stile di gioco:
@@ -447,6 +515,11 @@ window.GameState = {
   reset() {
     this.level = 1;
     this.wax = 0;
+    // Granate: scorta della run. Sta qui e non nel giocatore perche' deve sopravvivere al
+    // passaggio da un livello all'altro (il giocatore viene ricreato, la run no).
+    this.granate = window.CONFIG.GRANATE_MAX;
+    this.bombaPronta = 0;
+    this.tempoDiGioco = 0;
     this.ownedAbilities = [];
     this.prossimoLivello = null;
     this.runStartAt = Date.now();

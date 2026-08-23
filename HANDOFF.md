@@ -169,6 +169,23 @@ il `create` gira al tick DOPO: non leggere subito `heroVisual`/`player` (aspetta
 Per i test in preview vale la regola god-mode robusta (metterlo nel hook `events.once('create')`, o il
 PG muore durante i riavvii e parte il game-over).
 
+### 📷 FOTOGRAFARE UNA SCENA (`tools/foto.py`, dal 2026-08-21)
+
+```
+python toolsoto.py assedio            -> foto_assedio.png
+python toolsoto.py assedio --gif      -> breve animazione
+python toolsoto.py laser              -> un leggendario in azione
+```
+Serve per le cose che si giudicano SOLO guardandole. La nebbia dell'assedio funzionava a misure —
+velocita' giusta, danno giusto, nemici risparmiati — ed era invisibile: se n'e' accorto l'utente
+chiedendo uno screenshot.
+⚠️ **Il browser invisibile disegna via software e va a una manciata di fotogrammi al secondo**: un
+effetto che dura mezzo secondo puo' essere gia' finito quando scatta la foto, e si scambierebbe per
+"non si vede". Per questo le scene dei leggendari METTONO IN PAUSA la scena prima di scattare (in
+pausa il disegno continua, le animazioni no). Costa due righe ed evita di inseguire un difetto che
+non esiste — e' successo davvero col laser (2026-08-23).
+⚠️ Le GIF servono per il movimento: una nebbia ferma sembra una macchia.
+
 ### Ancora da far playtestare sul telefono all'utente (dal più vecchio)
 Arretrato mai provato dal vivo (verificato solo staticamente in sessioni precedenti):
 - `5a52325`→`00ec955` — gocce dal soffitto, mutatori, tipi di livello (corsa/**assedio**),
@@ -194,7 +211,7 @@ Lavoro nuovo di questa sessione (logica ok, feel/aspetto da provare):
 ```
 python tools\controlla.py
 ```
-74 controlli in ~7m. Apre il gioco in un browser invisibile (Playwright), inietta
+93 controlli in ~13m. Apre il gioco in un browser invisibile (Playwright), inietta
 `tools/checks.js` ed esce con codice 1 se qualcosa e' rotto. **Ogni controllo nasce da un bug
 realmente successo** (e' annotato nel file quale): cerume sospeso sul terreno, salto morto nelle
 cunette, nemici sotto il pavimento o incastrati nelle membrane, pedane irraggiungibili o sepolte,
@@ -445,6 +462,23 @@ appena spawnato) → filtrare per `x.kind`/`x.swarmling`/`x.fugitive` o distrugg
   colori pieni = prospettiva atmosferica). **Per aggiungere set c'e' una procedura pronta in
   memoria (`earwaxwar-background-pipeline`): basta che l'utente dica "voglio altri sfondi".**
   Pipeline in `tools/bake_background_set.ps1` (ridimensiona, scontorna il magenta, specchia).
+- **Leggendari (dal 2026-08-19, completati il 2026-08-23):** cinque poteri carissimi in negozio,
+  ognuno chiuso dietro un grado di infezione da SUPERARE (`window.LEGGENDARI` in state.js):
+  bomba (0), granate (1), laser (2), trapano (3), razzo (4).
+  ⚠️ **Se ne equipaggia UNO per run** (scelta dell'utente): il pulsante a schermo e' sempre uno
+  solo, nello stesso posto, e cambia solo l'icona. La scelta si fa nella pagina "leggendari" del
+  negozio, perche' l'Arsenale delle armi e' ancora chiuso.
+  ⚠️ Le ricariche vanno su `GameState.tempoDiGioco`, non su `scene.time.now`: quest'ultimo
+  riparte a ogni livello e il potere sarebbe pronto all'inizio di ognuno.
+  ⚠️ I boss: la bomba non li tocca affatto, gli altri quattro li colpiscono scontati
+  (`CONFIG.DANNO_BOSS_LEGG`). Uno scontro che si vince premendo un tasto toglie il momento in cui
+  il gioco chiede di piu'; un tasto inerte proprio nello scontro sarebbe l'errore opposto.
+  Le granate sono le uniche a MUNIZIONI (3 per run, una torna a fine livello) e il loro pulsante
+  mostra un numero invece della lancetta.
+- **Assedio con la nebbia (dal 2026-08-23):** un gas di cerume avanza da sinistra e obbliga a
+  muoversi. NON tocca i nemici (li sputa fuori), fa danno nel tempo senza contraccolpo, ed e'
+  RITAGLIATA sulla sagoma del condotto: un gas in un tubo non attraversa le pareti. Dettagli e
+  motivi in ROADMAP.md §H.7.
 - **Mobile:** touch, canvas che si ri-adatta alla rotazione, tool per giocare da telefono.
 
 ---

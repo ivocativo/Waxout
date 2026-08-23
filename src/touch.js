@@ -101,6 +101,23 @@ window.TouchControls = (function () {
       g.fillCircle(x, y + s * 0.18, s * 0.72);
       g.fillRect(x - s * 0.16, y - s * 0.95, s * 0.32, s * 0.45);   // miccia
       g.fillCircle(x + s * 0.28, y - s * 1.05, s * 0.22);           // scintilla
+    } else if (type === 'granata') {        // granata: corpo a pigna con levetta
+      g.fillCircle(x, y + s * 0.25, s * 0.62);
+      g.fillRect(x - s * 0.22, y - s * 0.72, s * 0.44, s * 0.42);    // collo
+      g.fillRect(x + s * 0.16, y - s * 0.95, s * 0.62, s * 0.16);    // levetta
+    } else if (type === 'laser') {          // laser: fascio orizzontale che si allarga
+      g.fillRect(x - s * 0.95, y - s * 0.16, s * 1.5, s * 0.32);
+      g.fillTriangle(x + s * 0.5, y - s * 0.6, x + s * 1.0, y, x + s * 0.5, y + s * 0.6);
+      g.fillCircle(x - s * 0.95, y, s * 0.3);                        // emettitore
+    } else if (type === 'trapano') {        // trapano: punta a spirale verso destra
+      g.fillTriangle(x + s * 1.0, y, x - s * 0.1, y - s * 0.62, x - s * 0.1, y + s * 0.62);
+      g.fillRect(x - s * 0.95, y - s * 0.34, s * 0.9, s * 0.68);     // corpo
+    } else if (type === 'razzo') {          // razzo: ogiva con pinne e fiamma dietro
+      g.fillTriangle(x + s * 1.0, y, x + s * 0.15, y - s * 0.45, x + s * 0.15, y + s * 0.45);
+      g.fillRect(x - s * 0.55, y - s * 0.3, s * 0.72, s * 0.6);
+      g.fillTriangle(x - s * 0.5, y - s * 0.3, x - s * 0.9, y - s * 0.85, x - s * 0.1, y - s * 0.3);
+      g.fillTriangle(x - s * 0.5, y + s * 0.3, x - s * 0.9, y + s * 0.85, x - s * 0.1, y + s * 0.3);
+      g.fillCircle(x - s * 0.85, y, s * 0.26);                       // fiamma
     } else if (type === 'dash') {
       g.fillTriangle(x - s, y - s, x, y, x - s, y + s);
       g.fillTriangle(x, y - s, x + s, y, x, y + s);
@@ -280,12 +297,27 @@ window.TouchControls = (function () {
       creati.push(bDash, bDash._icon);
       tapBtn(bDash, 'dashQueued');
     }
-    // BOMBA (leggendario): sopra allo Scatto, o al suo posto se lo Scatto non c'e' ancora —
-    // cosi' i pulsanti restano incolonnati e non si crea un buco.
-    if (window.GameState.player && window.GameState.player.bomba) {
+    // LEGGENDARIO: sopra allo Scatto, o al suo posto se lo Scatto non c'e' ancora — cosi' i
+    // pulsanti restano incolonnati e non si crea un buco.
+    // ⚠️ UN SOLO PULSANTE, qualunque sia il potere: se ne equipaggia uno per run (vedi
+    // window.LEGGENDARI), percio' il pollice ha sempre lo stesso tasto nello stesso posto e
+    // cambia solo il disegno sopra. Cinque tasti diversi avrebbero riempito lo schermo di un
+    // telefono per un potere che si usa ogni dieci secondi.
+    const legId = window.GameState.player && window.GameState.player.leggendario;
+    const leg = legId && (window.LEGGENDARI || {})[legId];
+    if (leg) {
       const dy = haScatto ? (ar * 2 + 16) * 2 : (ar * 2 + 16);
       const rb = ar * 0.82, bx2 = jx, by2 = jy - dy;
-      const bBomba = button(scene, bx2, by2, rb, 'bomba');
+      const bBomba = button(scene, bx2, by2, rb, leg.icona || 'bomba');
+      // Le GRANATE non hanno una ricarica: hanno delle munizioni. Il numero le racconta meglio
+      // di qualunque lancetta — e "quante me ne restano" e' l'unica domanda che ci si fa.
+      const munizioni = leg.ability === 'granata'
+        ? scene.add.text(bx2 + rb * 0.72, by2 + rb * 0.72, '', {
+            fontFamily: 'monospace', fontSize: '15px', color: '#fff7e8',
+            stroke: '#14161f', strokeThickness: 4,
+          }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH + 2)
+        : null;
+      if (munizioni) creati.push(munizioni);
       // INDICATORE DI RICARICA (playtest 2026-08-21: "l'icona non da' indicazioni di quando e'
       // pronta"). Appena usata la bomba il pulsante si smorza, e un settore si riempie IN SENSO
       // ORARIO dall'alto — come una lancetta che fa il giro. Quando il cerchio e' completo la
@@ -297,7 +329,17 @@ window.TouchControls = (function () {
       creati.push(bBomba, bBomba._icon, gRic);
       tapBtn(bBomba, 'bombaQueued');
       // p = quanto manca alla ricarica, da 0 (appena usata) a 1 (pronta).
-      state.aggiornaBomba = (p) => {
+      state.aggiornaBomba = (p, scorte) => {
+        if (munizioni) {
+          // A munizioni finite il tasto resta visibile ma spento: sparire direbbe "non ce l'hai
+          // piu'", mentre la scorta torna a fine livello.
+          const n = Math.max(0, scorte | 0);
+          munizioni.setText(String(n));
+          bBomba.setAlpha(n > 0 ? 1 : 0.4);
+          bBomba._icon.setAlpha(n > 0 ? 1 : 0.4);
+          munizioni.setAlpha(n > 0 ? 1 : 0.5);
+          return;
+        }
         const q = Math.max(0, Math.min(1, p));
         gRic.clear();
         const acceso = q >= 1;

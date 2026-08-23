@@ -153,7 +153,7 @@ class MenuScene extends Phaser.Scene {
       const lines = [
         T.t('menu_ctrl_title'), '',
         T.t('menu_ctrl_move'), T.t('menu_ctrl_jump'), T.t('menu_ctrl_attack'),
-        T.t('menu_ctrl_dash'), T.t('menu_ctrl_touch'), '',
+        T.t('menu_ctrl_dash'), T.t('menu_ctrl_leg'), T.t('menu_ctrl_touch'), '',
         T.t('menu_goal_1'), T.t('menu_goal_2'),
       ];
       const body = this.add.text(W / 2, H / 2 - 100, lines.join('\n'), {

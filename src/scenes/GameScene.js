@@ -71,6 +71,23 @@ class GameScene extends Phaser.Scene {
     // azzererebbe ad ogni livello (create() gira ad ogni scene.start), mentre deve valere una
     // sola volta per l'intera RUN (si azzera solo su GameState.reset()).
     this.speechCooldownUntil = 0;  // CARATTERE COMICO: azzerato ad ogni livello (vedi maybeSpeech)
+    // ⚠️ ROBA DEL LIVELLO PRECEDENTE DA BUTTARE. La scena e' SEMPRE LO STESSO OGGETTO: `create()`
+    // rigira a ogni livello, ma i campi che nessuno azzera si portano dietro il contenuto vecchio.
+    // Gli oggetti a schermo, quelli si', vengono distrutti col livello — e quindi qui restavano
+    // elenchi pieni di roba MORTA, con due conseguenze concrete:
+    //  - la nebbia dell'assedio sarebbe stata invisibile dal secondo assedio in poi (si sarebbero
+    //    spostati i batuffoli del livello prima, che non esistono piu');
+    //  - un razzo o una granata del livello prima restavano in cima all'elenco per sempre.
+    // Trovato perche' un controllo automatico prendeva il razzo sbagliato (2026-08-23).
+    this.granateVive = [];
+    this.razziVivi = [];
+    this.nebbia = null;
+    this.spore = null;
+    // ⚠️ La sagoma va anche DISTRUTTA, non solo dimenticata: e' un disegno creato con `add: false`
+    // (non sta nella lista di cio' che si vede) e quindi la chiusura del livello non lo porta via.
+    if (this._mascheraGfx) { this._mascheraGfx.destroy(); this._mascheraGfx = null; }
+    this._mascheraCondotto = null;   // la sagoma e' quella del condotto VECCHIO
+    this._trapanoFino = 0;
     this.cleanGoal = 0.8;   // frazione di cerume da pulire per poter completare il livello
 
     // La vita NON si ricarica a ogni livello: si porta dietro tra un livello e l'altro (a
@@ -487,6 +504,15 @@ class GameScene extends Phaser.Scene {
       this.siegeLeftMs = 30000 + lvl * 2000;
       this.siegeQuota = 10 + lvl;
       this.siegeKills = 0;
+      // VALANGA DI CERUME (playtest: nell'assedio conviene piantarsi e aspettare i nemici).
+      // Un fronte che avanza da sinistra: se il posto in cui stai smette di essere sicuro,
+      // restare fermi non e' piu' un'opzione. ⚠️ La velocita' NON e' un numero scelto a occhio:
+      // si calcola perche' copra una frazione del condotto nel tempo dell'assedio, quindi si
+      // adatta da sola a livelli lunghi o corti e a durate diverse.
+      // ⚠️ E' molto piu' lenta del giocatore (220 px/s) apposta: deve SPINGERE, non inseguire.
+      // Se corresse quanto lui l'assedio diventerebbe una fuga, che e' un'altra modalita'.
+      this.valangaX = -220;
+      this.valangaVel = (this.worldW * window.CONFIG.VALANGA_QUOTA) / (this.siegeLeftMs / 1000);
       this._nasciteIniziali = new Array(Math.min(3, this.maxEnemies)).fill([]);
       this.showBanner(window.I18n.t('game_siege_in', { q: this.siegeQuota }), '#ff8f5a');
     } else {
@@ -1004,6 +1030,7 @@ class GameScene extends Phaser.Scene {
   makeDripTexture() {
     if (this.textures.exists('drip')) return;
     const g = this.make.graphics({ x: 0, y: 0, add: false });
+    this._mascheraGfx = g;
     g.fillStyle(0xe8a32a, 1);
     g.fillCircle(7, 15, 6);                       // pancia rotonda (basso)
     g.fillTriangle(7, 1, 2.5, 14, 11.5, 14);      // punta (alto)
@@ -1670,7 +1697,11 @@ class GameScene extends Phaser.Scene {
   // dentro la sezione raggiungibile — vedi spawnSwarmRush).
   pickGroundX(preferSide) {
     const px = this.player.x;
-    let left = 40, right = this.worldW - 40;
+    // ⚠️ Mai DIETRO la valanga: un nemico nato li' dovrebbe attraversare tutto il fronte per
+    // raggiungerti, e nell'assedio la quota si conta uccidendo — sarebbe tempo perso senza che il
+    // giocatore capisca perche'. (La valanga non li uccide, vedi avanzaValanga: escono comunque,
+    // ma farli nascere gia' davanti evita l'attesa.)
+    let left = Math.max(40, (this.valangaX || 0) + 60), right = this.worldW - 40;
     (this.membraneXs || []).forEach((mx) => {
       if (mx <= px) { if (mx + 80 > left) left = mx + 80; }     // appena dopo la membrana dietro
       else { if (mx - 80 < right) right = mx - 80; }            // appena prima della membrana davanti
@@ -2646,6 +2677,415 @@ class GameScene extends Phaser.Scene {
         if (m.active) { this.burst('bit_wax', m.x, m.y, 6); m.destroy(); }
       });
     });
+  }
+
+
+
+  // ============================ GLI ALTRI LEGGENDARI ============================
+  // ⚠️ UNO SOLO PER RUN, sempre sullo STESSO tasto (window.LEGGENDARI, scelta nell'Arsenale).
+  // Regola comune a tutti, imparata con la bomba: un leggendario deve aggiungere un GESTO, non
+  // dei numeri. In questo gioco la cadenza domina, percio' un potere che si limitasse a fare
+  // "piu' danno" sarebbe indistinguibile da un potenziamento del negozio.
+  // ⚠️ E NESSUNO DI LORO DECIDE UNO SCONTRO DI BOSS: come per la bomba, un boss che cade premendo
+  // un tasto toglie il momento in cui il gioco chiede di piu'. Qui i boss prendono danno RIDOTTO
+  // (CONFIG.DANNO_BOSS_LEGG) invece che zero: il potere resta utile, ma non risolve.
+  usaLeggendario(adx, ady) {
+    const p = window.GameState.player;
+    const G = window.GameState;
+    const id = p.leggendario;
+    if (!id) return;
+    const item = (window.LEGGENDARI || {})[id];
+    if (!item) return;
+    const tg = G.tempoDiGioco;
+
+    // Le GRANATE vanno a munizioni, tutti gli altri a ricarica.
+    if (item.ability === 'granata') {
+      if ((G.granate | 0) <= 0) { window.Sfx.hurt(); return; }
+      if (tg < (G.granataPronta || 0)) return;      // solo per non svuotare la scorta in un istante
+      G.granate -= 1;
+      G.granataPronta = tg + window.CONFIG.GRANATA_PAUSA;
+      this.lanciaGranata(adx, ady);
+      return;
+    }
+
+    if (tg <= (G.bombaPronta || 0)) return;
+    G.bombaPronta = tg + window.CONFIG[GameScene.RICARICHE[item.ability]];
+    if (item.ability === 'bomba') this.esplodiBomba();
+    else if (item.ability === 'laser') this.sparaLaser(adx, ady);
+    else if (item.ability === 'trapano') this.trapanata();
+    else if (item.ability === 'razzo') this.lanciaRazzo(adx, ady);
+  }
+
+  // Quanta parte della ricarica e' passata (0 = appena usato, 1 = pronto): serve al pulsante.
+  ricaricaLeggendario() {
+    const p = window.GameState.player, G = window.GameState;
+    const item = (window.LEGGENDARI || {})[p.leggendario];
+    if (!item || item.ability === 'granata') return 1;
+    const manca = (G.bombaPronta || 0) - G.tempoDiGioco;
+    return manca <= 0 ? 1 : 1 - (manca / window.CONFIG[GameScene.RICARICHE[item.ability]]);
+  }
+
+  // Danno di un leggendario su un singolo bersaglio, boss compresi ma con lo sconto.
+  colpoLeggendario(e, dmg) {
+    if (!e.active || e.spawning) return;
+    this.damageEnemy(e, e.kind === 'boss'
+      ? Math.max(1, Math.round(dmg * window.CONFIG.DANNO_BOSS_LEGG)) : dmg, true);
+  }
+
+  // Scoppio in un raggio: nemici, cerume e proiettili nemici. Lo usano granata e razzo.
+  scoppioLeggendario(x, y, R, dmg) {
+    const anello = this.add.circle(x, y, R, 0xffb347, 0.28).setDepth(139).setScale(0.15);
+    anello.setStrokeStyle(6, 0xffd166, 0.95);
+    this.tweens.add({ targets: anello, scale: 1, alpha: 0, duration: 320, ease: 'Cubic.out',
+      onComplete: () => anello.destroy() });
+    for (let n = 0; n < 10; n++) {
+      const a = Math.random() * Math.PI * 2, d = R * (0.3 + Math.random() * 0.6);
+      const b = this.add.circle(x, y, 3 + Math.random() * 6, 0xffe0a3, 0.8).setDepth(139);
+      this.tweens.add({ targets: b, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, alpha: 0,
+        duration: 300 + Math.random() * 250, ease: 'Cubic.out', onComplete: () => b.destroy() });
+    }
+    this.cameras.main.shake(160, 0.008);
+    window.Sfx.smash();
+    this.enemies.getChildren().slice().forEach((e) => {
+      if (e.active && !e.spawning && Math.hypot(e.x - x, e.y - y) < R) this.colpoLeggendario(e, dmg);
+    });
+    this.blocks.getChildren().slice().forEach((b) => {
+      if (b.active && Math.hypot(b.x - x, b.y - y) < R) this.damageBlock(b, dmg);
+    });
+    this.movers.getChildren().slice().forEach((m) => {
+      if (m.active && Math.hypot(m.x - x, m.y - y) < R) { this.burst('bit_wax', m.x, m.y, 5); m.destroy(); }
+    });
+  }
+
+  // ---- GRANATA: si lancia, rotola, e scoppia dopo la miccia ----
+  // ⚠️ NON scoppia al contatto: e' un'arma che si tira DOVE SARANNO i nemici, non dove sono. La
+  // miccia e' il suo modo di essere difficile — ed e' anche il motivo per cui averne solo tre non
+  // frustra: sbagliarne una e' colpa di come l'hai tirata, non di un tasto premuto tardi.
+  // ⚠️ Fisica a mano invece che con un corpo Arcade: cosi' non entra in nessun gruppo esistente
+  // (proiettili nemici, getto) e non ne eredita le collisioni per sbaglio.
+  lanciaGranata(adx, ady) {
+    const g = this.add.circle(this.player.x + this.facing * 14, this.player.y - 6, 6, 0x9fbf6a, 1)
+      .setDepth(12);
+    g.setStrokeStyle(2, 0x3d4a22, 1);
+    const su = ady < 0;
+    g._vx = (adx === 0 ? this.facing * 0.35 : adx) * (su ? 180 : 330);
+    g._vy = su ? -430 : -260;
+    g._fino = this.time.now + window.CONFIG.GRANATA_MICCIA;
+    (this.granateVive = this.granateVive || []).push(g);
+    window.Sfx.spray();
+  }
+
+  // ---- RAZZO: parte dove miri e CURVA verso il bersaglio dentro un cono davanti a se' ----
+  // ⚠️ Il cono (RAZZO_CONO) e la velocita' di correzione (RAZZO_CURVA) SONO la mira: senza cono il
+  // razzo inseguirebbe chiunque e sarebbe il razzo a giocare; senza curva sarebbe un colpo dritto
+  // qualunque. Deve premiare chi punta grosso modo nella direzione giusta, non chi punta esatto.
+  lanciaRazzo(adx, ady) {
+    const fermo = adx === 0 && ady === 0;
+    const r = this.add.triangle(this.player.x + this.facing * 16, this.player.y - 4,
+      0, -5, 16, 0, 0, 5, 0xffd166, 1).setDepth(12);
+    r.setStrokeStyle(2, 0xff8a3d, 1);
+    r._ang = fermo ? (this.facing > 0 ? 0 : Math.PI) : Math.atan2(ady, adx);
+    r._fino = this.time.now + window.CONFIG.RAZZO_VITA;
+    (this.razziVivi = this.razziVivi || []).push(r);
+    window.Sfx.spray();
+  }
+
+  // ---- LASER: un fascio dritto che attraversa tutto ----
+  // ⚠️ Non insegue e non curva: si prepara mettendosi in fila coi nemici. E' l'opposto esatto del
+  // razzo, ed e' per questo che i due possono convivere senza essere lo stesso potere.
+  sparaLaser(adx, ady) {
+    const p = window.GameState.player;
+    const dmg = Math.max(1, Math.round(p.damage * window.CONFIG.LASER_DANNO));
+    const SP = window.CONFIG.LASER_SPESSORE;
+    const fermo = adx === 0 && ady === 0;
+    const ang = fermo ? (this.facing > 0 ? 0 : Math.PI) : Math.atan2(ady, adx);
+    const L = 1400;                                  // ben oltre lo schermo: attraversa tutto
+    const x0 = this.player.x, y0 = this.player.y - 4;
+
+    // Ancoraggio al CENTRO (quello di sempre) e centro calcolato a mano: il fascio deve partire
+    // dalla bocca dell'arma, non essere centrato sul personaggio. Si evita di spostare l'origine
+    // perche' sulle figure geometriche di Phaser e' una strada poco battuta, e qui non serve.
+    const cxm = x0 + Math.cos(ang) * L / 2, cym = y0 + Math.sin(ang) * L / 2;
+    const fascio = this.add.rectangle(cxm, cym, L, SP, 0xfff0a0, 0.85)
+      .setDepth(140).setRotation(ang);
+    const alone = this.add.rectangle(cxm, cym, L, SP * 2.1, 0xff8a3d, 0.35)
+      .setDepth(139).setRotation(ang);
+    this.tweens.add({ targets: [fascio, alone], alpha: 0, scaleY: 0.2,
+      duration: window.CONFIG.LASER_DURATA, ease: 'Quad.in',
+      onComplete: () => { fascio.destroy(); alone.destroy(); } });
+    this.cameras.main.shake(180, 0.010);
+    window.Sfx.smash();
+
+    // Chi e' colpito: distanza dalla RETTA del fascio entro meta' spessore, e DAVANTI alla bocca.
+    // ⚠️ La sola distanza dalla retta non basta: senza il controllo "davanti" il laser
+    // colpirebbe anche alle spalle, che e' esattamente cio' che un raggio non fa.
+    const cx = Math.cos(ang), cy = Math.sin(ang);
+    const dentro = (o) => {
+      const ox = o.x - x0, oy = o.y - y0;
+      const avanti = ox * cx + oy * cy;
+      if (avanti < -10 || avanti > L) return false;
+      return Math.abs(-ox * cy + oy * cx) < SP * 0.5 + 14;
+    };
+    this.enemies.getChildren().slice().forEach((e) => {
+      if (e.active && !e.spawning && dentro(e)) this.colpoLeggendario(e, dmg);
+    });
+    this.blocks.getChildren().slice().forEach((b) => { if (b.active && dentro(b)) this.damageBlock(b, dmg); });
+    this.movers.getChildren().slice().forEach((m) => {
+      if (m.active && dentro(m)) { this.burst('bit_wax', m.x, m.y, 5); m.destroy(); }
+    });
+  }
+
+  // ---- TRAPANO: una carica in avanti che perfora nemici e cerume ----
+  // ⚠️ TASTO TUTTO SUO e non attaccato allo Scatto (decisione dell'utente 2026-08-22): lo scatto
+  // ha gia' un potenziamento che fa danno, e sommarli avrebbe reso impossibile capire quale dei
+  // due stava facendo cosa. Cosi' invece il gesto e' riconoscibile: si va dritti e si passa
+  // DENTRO le cose, macinandole, per quasi mezzo secondo.
+  trapanata() {
+    this._trapanoFino = this.time.now + window.CONFIG.TRAPANO_DURATA;
+    this._trapanoTic = 0;
+    this._trapanoVerso = this.facing;
+    this.invulnUntil = Math.max(this.invulnUntil, this._trapanoFino);
+    window.Sfx.dash();
+  }
+
+  // Il trapano mentre gira: si muove da solo e macina quello che attraversa.
+  avanzaTrapano(now) {
+    if (!this._trapanoFino || now > this._trapanoFino) return;
+    const p = window.GameState.player;
+    this.player.setVelocityX(this._trapanoVerso * window.CONFIG.TRAPANO_VEL);
+    this.player.setVelocityY(Math.min(this.player.body.velocity.y, 40));   // non si impenna
+    if (Math.random() < 0.6) {                        // scintille davanti alla punta
+      const sc = this.add.circle(this.player.x + this._trapanoVerso * 22,
+        this.player.y + (Math.random() - 0.5) * 26, 2 + Math.random() * 2, 0xffe9a8, 0.9).setDepth(12);
+      this.tweens.add({ targets: sc, alpha: 0, duration: 220, onComplete: () => sc.destroy() });
+    }
+    if (now < this._trapanoTic) return;
+    this._trapanoTic = now + window.CONFIG.TRAPANO_TIC;
+    const dmg = Math.max(1, Math.round(p.damage * window.CONFIG.TRAPANO_DANNO));
+    const R = 44;
+    this.enemies.getChildren().slice().forEach((e) => {
+      if (e.active && !e.spawning && Math.hypot(e.x - this.player.x, e.y - this.player.y) < R) {
+        this.colpoLeggendario(e, dmg);
+      }
+    });
+    this.blocks.getChildren().slice().forEach((b) => {
+      if (b.active && Math.hypot(b.x - this.player.x, b.y - this.player.y) < R) this.damageBlock(b, dmg);
+    });
+  }
+
+  // Granate e razzi in volo. ⚠️ Simulati a mano (niente corpi Arcade) per non finire nei gruppi
+  // gia' esistenti e nelle loro collisioni: sono pochi oggetti e vivono pochi secondi.
+  avanzaLeggendari(dt) {
+    const s = dt / 1000, now = this.time.now;
+
+    (this.granateVive || []).slice().forEach((g) => {
+      if (!g.active) return;
+      g._vy += window.CONFIG.GRAVITY * s;
+      g.x += g._vx * s;
+      g.y += g._vy * s;
+      const suolo = this.terrainTopAt(Phaser.Math.Clamp(g.x, 0, this.worldW)) - 6;
+      if (g.y >= suolo) { g.y = suolo; g._vy = -g._vy * 0.35; g._vx *= 0.6; }   // rimbalza e rotola
+      g.setScale(1 + Math.sin(now / 60) * 0.12);                                 // pulsa: la miccia
+      if (now >= g._fino) {
+        const dmg = Math.max(1, Math.round(window.GameState.player.damage * window.CONFIG.GRANATA_DANNO));
+        this.scoppioLeggendario(g.x, g.y, window.CONFIG.GRANATA_RAGGIO, dmg);
+        g.destroy();
+        this.granateVive = this.granateVive.filter((o) => o !== g);
+      }
+    });
+
+    (this.razziVivi || []).slice().forEach((r) => {
+      if (!r.active) return;
+      // Bersaglio: il piu' vicino DENTRO il cono davanti al razzo. Fuori dal cono non esiste.
+      let scelto = null, meglio = Infinity;
+      this.enemies.getChildren().forEach((e) => {
+        if (!e.active || e.spawning) return;
+        const d = Math.hypot(e.x - r.x, e.y - r.y);
+        if (d > 520 || d >= meglio) return;
+        const da = Phaser.Math.Angle.Wrap(Math.atan2(e.y - r.y, e.x - r.x) - r._ang);
+        if (Math.abs(da) > window.CONFIG.RAZZO_CONO) return;
+        meglio = d; scelto = e;
+      });
+      if (scelto) {
+        const da = Phaser.Math.Angle.Wrap(Math.atan2(scelto.y - r.y, scelto.x - r.x) - r._ang);
+        const max = window.CONFIG.RAZZO_CURVA * s;
+        r._ang += Phaser.Math.Clamp(da, -max, max);
+      }
+      r.setRotation(r._ang);
+      r.x += Math.cos(r._ang) * window.CONFIG.RAZZO_VEL * s;
+      r.y += Math.sin(r._ang) * window.CONFIG.RAZZO_VEL * s;
+      const f = this.add.circle(r.x - Math.cos(r._ang) * 10, r.y - Math.sin(r._ang) * 10,
+        3, 0xff8a3d, 0.7).setDepth(11);                                         // scia
+      this.tweens.add({ targets: f, alpha: 0, scale: 0.3, duration: 260, onComplete: () => f.destroy() });
+
+      const cxr = Phaser.Math.Clamp(r.x, 0, this.worldW);
+      const addosso = this.enemies.getChildren().some((e) => e.active && !e.spawning
+        && Math.hypot(e.x - r.x, e.y - r.y) < 26);
+      const finito = now >= r._fino || addosso || r.y >= this.terrainTopAt(cxr)
+        || r.y <= this.ceilingYAt(cxr) || r.x < 0 || r.x > this.worldW;
+      if (finito) {
+        const dmg = Math.max(1, Math.round(window.GameState.player.damage * window.CONFIG.RAZZO_DANNO));
+        this.scoppioLeggendario(r.x, r.y, window.CONFIG.RAZZO_RAGGIO, dmg);
+        r.destroy();
+        this.razziVivi = this.razziVivi.filter((o) => o !== r);
+      }
+    });
+  }
+
+  // VALANGA DELL'ASSEDIO: un fronte di cerume che avanza da sinistra.
+  // ⚠️ NON TOCCA I NEMICI, ED E' LA DECISIONE PIU' IMPORTANTE DI TUTTO IL MECCANISMO. Se li
+  // uccidesse, al giocatore converrebbe SEMINARLI e lasciare che la valanga faccia il lavoro —
+  // ma l'assedio si vince UCCIDENDO una quota, quindi la modalita' si giocherebbe da sola.
+  // Sono fatti di cerume: ci stanno dentro come a casa loro e ne escono dal fronte continuando a
+  // inseguirti. Cosi' devi ucciderli tu, sempre; e sparisce anche il problema del nemico nato
+  // dietro il muro, che altrimenti sarebbe irraggiungibile e falserebbe la quota.
+  // Texture della NEBBIA: un batuffolo sfumato, dal centro pieno ai bordi trasparenti.
+  // ⚠️ Si genera su una tela 2D e non con Graphics, perche' a Graphics mancano le sfumature — ed
+  // e' proprio la sfumatura a fare la differenza fra "gas" e "tinta piatta". Sovrapponendo tanti
+  // batuffoli con opacita' bassa il bordo esce frastagliato e morbido da solo, senza doverlo
+  // disegnare: e' il motivo per cui non c'e' piu' nessuna linea netta.
+  makeNebbiaTexture() {
+    if (this.textures.exists('nebbia')) return;
+    const S = 160;
+    const tela = this.textures.createCanvas('nebbia', S, S);
+    const c = tela.getContext();
+    const grad = c.createRadialGradient(S / 2, S / 2, 4, S / 2, S / 2, S / 2);
+    grad.addColorStop(0, 'rgba(255,238,190,0.95)');
+    grad.addColorStop(0.45, 'rgba(226,178,92,0.55)');
+    grad.addColorStop(1, 'rgba(190,140,60,0)');
+    c.fillStyle = grad;
+    c.fillRect(0, 0, S, S);
+    tela.refresh();
+  }
+
+  // SAGOMA DEL CONDOTTO, usata per RITAGLIARE la nebbia.
+  // ⚠️ Serve perche' un gas dentro un condotto non attraversa le pareti: la prima versione
+  // riempiva tutta l'altezza dello schermo e sbordava sopra il soffitto e sotto il terreno, e
+  // invece di un gas sembrava un velo appoggiato sull'immagine (segnalato dall'utente guardando
+  // l'anteprima animata, 2026-08-23).
+  // Si ritaglia invece di limitarsi ad abbassare i batuffoli: sono macchie sfumate larghe piu'
+  // di cento pixel, quindi per non sbordare dovrebbero stare tutte al centro — e il condotto
+  // resterebbe vuoto proprio contro le pareti, dove il gas dovrebbe premere di piu'.
+  // Il profilo non cambia durante il livello, quindi si disegna una volta sola.
+  // Soffitto e pavimento in un dato punto, con i piedi dentro il mondo (fuori dai bordi le
+  // due funzioni del profilo non hanno campioni e restituirebbero valori senza senso).
+  quoteCondotto(x) {
+    const cx = Phaser.Math.Clamp(x, 0, this.worldW);
+    return { su: this.ceilingYAt(cx), giu: this.terrainTopAt(cx) };
+  }
+
+  mascheraCondotto() {
+    if (this._mascheraCondotto) return this._mascheraCondotto;
+    // Non va aggiunta alla scena: una maschera non si vede, viene solo usata come stampo.
+    const g = this.make.graphics({ x: 0, y: 0, add: false });
+    const passo = 16;                                  // abbastanza fitto da seguire i gradini
+    const punti = [];
+    for (let x = 0; x <= this.worldW; x += passo) punti.push({ x, y: this.ceilingYAt(x) });
+    for (let x = this.worldW; x >= 0; x -= passo) punti.push({ x, y: this.terrainTopAt(x) });
+    g.fillStyle(0xffffff, 1);
+    g.fillPoints(punti, true);
+    this._mascheraCondotto = g.createGeometryMask();
+    return this._mascheraCondotto;
+  }
+
+  // VALANGA DELL'ASSEDIO: una NEBBIA di cerume che avanza da sinistra.
+  // ⚠️ NON TOCCA I NEMICI, ED E' LA DECISIONE PIU' IMPORTANTE DEL MECCANISMO. Se li uccidesse, al
+  // giocatore converrebbe SEMINARLI e lasciare che la nebbia faccia il lavoro — ma l'assedio si
+  // vince UCCIDENDO una quota, quindi la modalita' si giocherebbe da sola. Sono fatti di cerume:
+  // ci stanno dentro come a casa loro e ne escono continuando a inseguirti.
+  avanzaValanga(dt) {
+    if (this.valangaX === undefined) return;
+    this.makeNebbiaTexture();
+    this.valangaX += this.valangaVel * (dt / 1000);
+    const cam = this.cameras.main;
+
+    // I batuffoli si creano una volta sola e poi si riposizionano: crearne e distruggerne a ogni
+    // fotogramma sarebbe uno spreco, e su un telefono si sentirebbe.
+    if (!this.nebbia) {
+      this.nebbia = [];
+      for (let n = 0; n < window.CONFIG.VALANGA_BATUFFOLI; n++) {
+        // ⚠️ Trasparenza NORMALE, non "schiarisci": il primo tentativo usava SCREEN e su un
+        // fondo gia' chiaro come il condotto la nebbia spariva. Un gas che avvolge deve
+        // COPRIRE quello che c'e' dietro, non illuminarlo.
+        const b = this.add.image(0, 0, 'nebbia').setDepth(12).setMask(this.mascheraCondotto());
+        b._fase = Math.random() * Math.PI * 2;         // ognuno respira per conto suo
+        b._dy = Math.random();                          // quota nel condotto
+        // ⚠️ META' DEI BATUFFOLI STA ADDOSSO AL FRONTE. Non e' un vezzo grafico: il danno
+        // comincia esattamente al fronte, e con una nebbia uniformemente sfumata il giocatore
+        // non capisce DOVE inizia a farsi male. Una fascia piu' densa sul bordo e' la linea
+        // che si vede, e dietro resta la foschia che la fa sembrare un gas e non un muro.
+        b._dx = (n % 2 === 0) ? Math.random() * 0.16 : 0.16 + Math.random() * 0.84;
+        b._scala = 0.7 + Math.random() * 0.9;
+        this.nebbia.push(b);
+      }
+    }
+    // SPORE: puntini che galleggiano dentro la nebbia. Servono a farla vedere VIVA — una foschia
+    // che si limita a ondeggiare sembra un filtro sull'immagine, mentre qualcosa che ci galleggia
+    // dentro le da' volume e dice "e' roba, non un effetto".
+    // ⚠️ Salgono lentamente e ripartono dal basso quando escono: cosi' bastano poche decine di
+    // punti per sembrare infinite, senza crearne e distruggerne di continuo.
+    if (!this.spore) {
+      this.spore = [];
+      for (let n = 0; n < window.CONFIG.VALANGA_SPORE; n++) {
+        const sp = this.add.circle(0, 0, 1.5 + Math.random() * 2.5, 0xfff0c0, 0.9)
+          .setDepth(12.5).setMask(this.mascheraCondotto());
+        sp._dx = Math.random();
+        sp._y = Math.random();
+        sp._vel = 0.04 + Math.random() * 0.10;      // quota al secondo: lentissime
+        sp._fase = Math.random() * Math.PI * 2;
+        this.spore.push(sp);
+      }
+    }
+
+    const t = this.time.now / 1000;
+    const profondita = cam.width * 0.9;      // quanto e' "spessa" la nebbia dietro il fronte
+    this.nebbia.forEach((b) => {
+      // ⚠️ Il fronte NON e' una linea: ogni batuffolo sporge di una quantita' diversa, e quel
+      // "diverso" ondeggia nel tempo. E' cosi' che il bordo smette di essere un taglio netto.
+      const sporgenza = Math.sin(t * 0.9 + b._fase) * 26;
+      b.x = this.valangaX - b._dx * profondita + sporgenza;
+      // La quota e' relativa al condotto IN QUEL PUNTO: dove il soffitto scende o il terreno
+      // sale la nebbia si stringe con lui, come farebbe un gas in una strozzatura. Misurarla
+      // sull'altezza dello schermo la faceva restare piatta mentre il condotto si muoveva.
+      const c = this.quoteCondotto(b.x);
+      b.y = c.su + b._dy * (c.giu - c.su) + Math.sin(t * 0.6 + b._fase * 2) * 14;
+      const pulsa = 1 + Math.sin(t * 0.8 + b._fase) * 0.12;
+      b.setScale(b._scala * pulsa);
+      // piu' densa dentro, piu' rada verso il bordo: la trasparenza racconta la profondita'
+      // piu' densa dentro, piu' rada verso il bordo: la trasparenza racconta la profondita'.
+      // Sono sovrapposti in tanti, quindi il singolo puo' restare leggero: e' la somma a fare
+      // il muro, ed e' anche cio' che rende il bordo sfumato invece che netto.
+      b.setAlpha(0.30 + (1 - b._dx) * 0.28);
+      b.setVisible(b.x > cam.scrollX - 200 && b.x < cam.scrollX + cam.width + 200);
+    });
+
+    this.spore.forEach((sp) => {
+      sp._y -= sp._vel * (dt / 1000);
+      if (sp._y < -0.05) { sp._y = 1.05; sp._dx = Math.random(); }   // uscita in alto: si ricomincia
+      sp.x = this.valangaX - sp._dx * profondita + Math.sin(t * 1.4 + sp._fase) * 18;
+      const c = this.quoteCondotto(sp.x);
+      sp.y = c.su + sp._y * (c.giu - c.su);
+      // brillano piano, sfasate fra loro: e' quello che le fa sembrare sospese e non incollate
+      sp.setAlpha(0.25 + 0.45 * (0.5 + 0.5 * Math.sin(t * 2.1 + sp._fase)));
+      sp.setVisible(sp.x > cam.scrollX - 60 && sp.x < cam.scrollX + cam.width + 60);
+    });
+
+    // DANNO NEL TEMPO, senza contraccolpo (scelta dell'utente): restare dentro logora, non
+    // sbatte. ⚠️ Non si usa hurtPlayer perche' quello SPINGE e da' 1,2s di invulnerabilita': in
+    // una nebbia in cui si puo' restare, quella spinta ti sbalzerebbe a ogni tic e
+    // l'invulnerabilita' renderebbe il veleno quasi innocuo.
+    if (this.player.x < this.valangaX && !this.locked) {
+      const p = window.GameState.player;
+      const godmode = window.Taratura && window.Taratura.godmode();
+      if (!godmode && this.time.now > (this._valangaTic || 0)) {
+        this._valangaTic = this.time.now + window.CONFIG.VALANGA_TIC;
+        p.hp -= Math.max(1, Math.round(p.maxHp * window.CONFIG.VALANGA_DANNO));
+        window.Sfx.hurt();
+        this.cameras.main.shake(90, 0.006);
+        this.tweens.add({ targets: this.player, alpha: 0.45, duration: 80, yoyo: true });
+        if (p.hp <= 0) this.gameOver();
+      }
+    }
   }
 
 
@@ -3689,6 +4129,11 @@ class GameScene extends Phaser.Scene {
     if (this.locked) return;
     this.locked = true;
     window.Sfx.win();
+    // GRANATE: a fine livello se ne recupera UNA se ne hai usate (regola dell'utente 2026-08-22).
+    // ⚠️ Una, non tutte: se si tornasse sempre a tre, tenersele da parte non avrebbe senso e
+    // conveniva sempre buttarle prima del traguardo. Cosi' invece spenderle costa davvero.
+    const G = window.GameState;
+    if (G.granate < window.CONFIG.GRANATE_MAX) G.granate += 1;
     if (this.spawnTimer) this.spawnTimer.remove();
     if (this.quakeTimer) { this.quakeTimer.remove(false); this.quakeTimer = null; }
     this.player.setVelocity(0, 0);
@@ -4007,6 +4452,7 @@ class GameScene extends Phaser.Scene {
     if (this.avvioAl && now < this.avvioAl) return false;
     // ASSEDIO: si vince ELIMINANDO la quota di nemici prima che scada il cronometro.
     if (this.levelKind === 'siege') {
+      this.avanzaValanga(dt);
       this.siegeLeftMs = Math.max(0, this.siegeLeftMs - dt);
       const left = Math.ceil(this.siegeLeftMs / 1000);
       this.updateBigTimer(window.I18n.t('hud_siege', {
@@ -4255,17 +4701,12 @@ class GameScene extends Phaser.Scene {
     // BOMBA DI CERUME (leggendario). Gesto a parte, con ricarica lunga: non tocca il colpo
     // normale ne' la cadenza — un leggendario che cambia i numeri sarebbe un potenziamento come
     // gli altri, uno che aggiunge un GESTO e' un giocattolo nuovo.
-    const bombaPremuta = Phaser.Input.Keyboard.JustDown(k.B) || this.touch.bombaQueued;
+    const legPremuto = Phaser.Input.Keyboard.JustDown(k.B) || this.touch.bombaQueued;
     this.touch.bombaQueued = false;
     // ⚠️ La ricarica va sul cronometro del TEMPO GIOCATO (GameState.tempoDiGioco), non su
     // `time`: quest'ultimo riparte da zero a ogni livello, quindi la ricarica si sarebbe
     // azzerata cambiando livello — e la bomba sarebbe stata pronta all'inizio di ognuno.
     // Cosi' invece i 30 secondi sono trenta secondi di gioco vero: i menu non li consumano.
-    const tg = window.GameState.tempoDiGioco;
-    if (p.bomba && bombaPremuta && tg > (window.GameState.bombaPronta || 0)) {
-      window.GameState.bombaPronta = tg + window.CONFIG.BOMBA_RICARICA;
-      this.esplodiBomba();
-    }
     if (p.dash && dashPressed && now > this.dashReady) {
       this.dashUntil = now + 160;
       this.dashReady = now + 700;
@@ -4286,6 +4727,11 @@ class GameScene extends Phaser.Scene {
     if (ady !== 0 && !left && !right) adx = 0;
     // Accovacciato: si spara ORIZZONTALE (basso), non verso il pavimento.
     if (this.crouching) { ady = 0; adx = this.facing; }
+
+    // LEGGENDARIO. ⚠️ QUI e non piu' su, insieme allo scatto: laser, razzo e granata partono
+    // NELLA DIREZIONE DI MIRA, che viene calcolata solo qualche riga sopra. Chiamandolo prima,
+    // tutti e tre sarebbero partiti sempre in orizzontale.
+    if (legPremuto) this.usaLeggendario(adx, ady);
 
     // Attacco UNICO e "intelligente" (tieni premuto: J / pulsante Spruzza / clic).
     // Se un nemico e' a distanza ravvicinata parte la BASTONATA (coton fioc) al posto
@@ -4593,12 +5039,10 @@ class GameScene extends Phaser.Scene {
     // Tempo GIOCATO: avanza solo qui dentro, quindi menu e pause non lo fanno correre.
     // E' il cronometro delle ricariche lunghe, che devono attraversare i livelli (vedi la Bomba).
     window.GameState.tempoDiGioco += delta;
-    // Il pulsante della Bomba mostra quanto manca alla ricarica: si aggiorna da qui perche' e'
-    // qui che vive il cronometro. A bomba mai usata la ricarica e' gia' finita, quindi 1.
+    // Il pulsante del LEGGENDARIO mostra quanto manca alla ricarica (o quante granate restano):
+    // si aggiorna da qui perche' e' qui che vive il cronometro del tempo giocato.
     if (this.touch && this.touch.aggiornaBomba) {
-      const pronta = window.GameState.bombaPronta || 0;
-      const manca = pronta - window.GameState.tempoDiGioco;
-      this.touch.aggiornaBomba(manca <= 0 ? 1 : 1 - (manca / window.CONFIG.BOMBA_RICARICA));
+      this.touch.aggiornaBomba(this.ricaricaLeggendario(), window.GameState.granate);
     }
     window.GameGfx.updateBackground(this);   // parallax: scorre gli strati di sfondo
     this.animateWax(time);                    // cerume "fluido": ondeggia e cola
@@ -4624,6 +5068,13 @@ class GameScene extends Phaser.Scene {
     this.aggiornaNemici(now);
 
     this.aggiornaAbilita(now);
+    // Granate e razzi in volo. Qui e non in cima: sopra si esce prima in un paio di casi
+    // (traguardo, cronometri) e i poteri gia' lanciati resterebbero appesi a mezz'aria.
+    this.avanzaLeggendari(dt);
+    // ⚠️ IL TRAPANO PER ULTIMO, DOPO i comandi: e' lui a dover decidere dove va il personaggio
+    // mentre gira. Chiamandolo prima, `comandiDelGiocatore` gli riscriveva sopra la velocita' e
+    // la carica non partiva proprio.
+    this.avanzaTrapano(now);
     this.chiudiFotogramma();
   }
 }
@@ -4695,6 +5146,11 @@ GameScene.MIRA_SU_OLTRE = 55 * Math.PI / 180;
 // tutte e due le direzioni (vedi il rimbalzo in update): sopra decide quanto presto scatta, sotto
 // quanto in ritardo si puo' ancora recuperare. Con 12 la fascia utile e' 24px su un nemico alto
 // 46 — grosso modo il quarto superiore del corpo, che e' quello che il giocatore mira.
+// Quale ricarica usa ogni leggendario. ⚠️ In un posto solo: la stessa mappa serviva sia a
+// premere il tasto sia a disegnare la lancetta del pulsante, e due copie prima o poi divergono
+// (il tasto direbbe "pronto" e la lancetta no).
+GameScene.RICARICHE = { bomba: 'BOMBA_RICARICA', laser: 'LASER_RICARICA',
+  trapano: 'TRAPANO_RICARICA', razzo: 'RAZZO_RICARICA' };
 GameScene.RIMBALZO_TOLLERANZA = 12;
 // I fogli del personaggio, per misurarne l'altezza disegnata all'avvio (misuraAltezzeDisegnate).
 GameScene.FOGLI_PG = ['hero_idle', 'hero_walk', 'hero_run', 'hero_jump', 'hero_crouch',

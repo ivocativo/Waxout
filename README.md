@@ -111,6 +111,11 @@ Roguelite giocabile su PC e su telefono/tablet, **anche come app Android**. _Agg
   (Corazzato, Esplosivo, che-si-sdoppia).
 - **Rigiocabilità:** carte potenziamento con **rarità**, **evoluzioni** (fusioni di abilità),
   **tipi di livello** (corsa/assedio/boss/sciame), **11 modificatori** e **eventi casuali**.
+- **Poteri leggendari:** cinque acquisti carissimi, ognuno chiuso dietro un grado di **Infezione**
+  da superare — Bomba di Cerume, Granate di Sapone, Raggio Laser, Trapano, Razzo a Ricerca. Se ne
+  porta in campo **uno per run**, su un pulsante dedicato.
+- **Assedio con la nebbia:** un gas di cerume avanza dal fondo del condotto e costringe a muoversi
+  invece di aspettare i nemici fermi in un angolo.
 - **Livelli esplorabili** (scrolling): un mondo largo da attraversare verso il **timpano**, con
   telecamera che segue, terreno a colline e cunette, membrane di cerume da sfondare, pedane e ostacoli.
 - **Estetica:** sfondi pittorici a 3 strati in parallax, personaggio e **tutti i nemici** da immagini

@@ -21,7 +21,7 @@ getto vale META' che sulla mazza (`jetDamage: 16 + lv('dmg') * per * 0.5`). Da q
 dell'utente di un potenziamento del negozio dedicato ai colpi a distanza: e' fondata, e la crosta
 a 17 palline al grado 5 e' il caso limite che la giustifica.
 
-## H.7 — ASSEDIO: COSTRINGERE A MUOVERSI (da progettare, 2026-08-21)
+## H.7 — ASSEDIO: COSTRINGERE A MUOVERSI ✅ FATTO (2026-08-23)
 Segnalato dai tester: nell'ASSEDIO conviene piantarsi in un punto e aspettare che i nemici
 arrivino. Il modo migliore di giocarlo e' anche il piu' noioso, che e' il difetto peggiore che
 possa avere una modalita'.
@@ -52,6 +52,28 @@ casa loro, e ne ESCONO dal fronte continuando a inseguirti. Tre vantaggi in un c
 Scartate: farla uccidere SENZA contare per la quota (il giocatore vede morire un nemico e il
 contatore fermo: sembra un difetto), e farla uccidere contando (rompe la modalita').
 
+**COM'E' VENUTA FUORI (dopo due giri di correzioni dell'utente).**
+Non e' un muro di cerume: e' una **NEBBIA**, stile Fortnite. Tre cose imposte dall'utente dopo
+aver visto l'anteprima animata, tutte e tre giuste:
+ 1. **piu' lenta** — la prima versione arrivava addosso troppo in fretta per essere una minaccia
+    di fondo: deve spingere, non inseguire;
+ 2. **niente tinta piatta e niente bordo netto** — decine di batuffoli sfumati sovrapposti
+    (`makeNebbiaTexture`, gradiente su tela 2D), meta' addosso al fronte perche' si veda DOVE
+    comincia a far male, con la sporgenza di ognuno che ondeggia nel tempo. Piu' delle spore che
+    ci galleggiano dentro, che sono quelle che le danno volume;
+ 3. **danno nel tempo, senza contraccolpo** — non si usa `hurtPlayer`, che SPINGE e regala 1,2s
+    di invulnerabilita': in una nebbia in cui si puo' restare, la spinta ti sbalzerebbe a ogni
+    tic e l'invulnerabilita' renderebbe il veleno quasi innocuo.
+⚠️ **Va RITAGLIATA sulla sagoma del condotto** (`mascheraCondotto`, maschera geometrica su
+soffitto + terreno). Senza, riempiva tutta l'altezza dello schermo e sbordava oltre le pareti:
+sembrava un velo appoggiato sull'immagine invece di un gas dentro un tubo. Non basta abbassare i
+batuffoli — sono macchie larghe piu' di cento pixel, quindi per non sbordare starebbero tutte al
+centro e il condotto resterebbe vuoto proprio contro le pareti, dove il gas dovrebbe premere di piu'.
+⚠️ **Si e' vista solo guardandola.** A misure funzionava tutto — velocita' giusta, danno giusto,
+nemici risparmiati — ed era INVISIBILE (il poligono riempiva il terreno invece del corridoio).
+Da li' e' nato `tools/foto.py`, che ora fa anche GIF (`--gif`): certe cose si giudicano solo in
+movimento, e una nebbia ferma sembra una macchia.
+
 **Terza strada, se A risultasse troppo dura:** la quota dell'assedio legata a ZONE — il conteggio
 avanza solo per i nemici eliminati vicino a un punto che si sposta lungo il condotto. Costringe a
 spostarsi senza minacciare di morte, ma e' piu' codice e piu' difficile da spiegare al giocatore.
@@ -59,38 +81,45 @@ spostarsi senza minacciare di morte, ma e' piu' codice e piu' difficile da spieg
 ⚠️ Da fare INSIEME alla verifica dal vivo dell'assedio, che nel backlog e' segnata come mai
 avvenuta ("Verificare dal vivo il tipo Assedio, mai giocato davvero").
 
-## H.8 — I PROSSIMI LEGGENDARI (scelti con l'utente, 2026-08-21)
-Approvati: **RAGGIO LASER** e **TRAPANO**. In valutazione: razzi e granate.
-Criterio, dopo la lezione delle armi: ogni leggendario deve avere un RUOLO diverso, non piu'
-potenza. La Bomba occupa gia' il posto del "pulsante d'emergenza".
+## H.8 — I PROSSIMI LEGGENDARI ✅ FATTI (2026-08-23)
+Cinque leggendari, uno per grado di infezione: **bomba** (grado 0), **granate** (1), **laser** (2),
+**trapano** (3), **razzo** (4). Costi da 1.980 a 3.740.
 
-- **RAGGIO LASER** (da fare per primo). Fascio continuo mentre tieni premuto, attraversa i nemici
-  in fila. ⚠️ Il pregio nascosto: non avendo colpi, IL PROBLEMA DELLA CADENZA NON SI PONE — non
-  puo' essere un malus travestito, che e' la trappola in cui erano cadute le armi dell'Arsenale.
-- **TRAPANO**. Lo scatto diventa una trivella: attraversa nemici e cerume mentre scatti. Riusa lo
-  scatto che c'e' gia', quindi costa poco, ed e' il piu' "da pulizia dell'orecchio" di tutti.
-- **RAZZI — la mira.** L'utente propone che vadano verso il nemico piu' vicino. ⚠️ Un
-  inseguimento puro toglie ogni merito alla mira: spari a caso e prendi comunque. Proposta:
-  partono nella DIREZIONE IN CUI MIRI e poi curvano dolcemente verso il bersaglio piu' vicino
-  DENTRO UN CONO davanti a te. Perdoni l'imprecisione senza regalare il colpo.
-- **GRANATE — 3 per partita, senza ricarica** (idea dell'utente). ⚠️ Attenzione al difetto noto
-  dei consumabili scarsi: se sono 3 per l'INTERA RUN, il giocatore le tiene da parte per il
-  momento giusto e finisce la run senza averle usate — succede in ogni gioco che ha oggetti
-  finiti. Proposta: **3 per LIVELLO**, che si ricaricano cambiando livello. Restano finite dentro
-  al singolo scontro (quindi ogni lancio e' una scelta) ma si usano davvero.
+Come sono venuti, e cosa e' cambiato rispetto al progetto:
+- **RAGGIO LASER.** Fascio dritto che attraversa tutto in linea retta, colpo unico invece che
+  continuo mentre tieni premuto. ⚠️ Colpisce solo DAVANTI: la sola distanza dalla retta del fascio
+  non sa niente di verso, e senza il controllo "avanti" il laser prendeva anche alle spalle —
+  cioe' proprio la cosa che lo distingue dal razzo (mettersi in fila coi nemici) sarebbe sparita.
+- **TRAPANO.** ⚠️ NON e' lo scatto trasformato, come diceva il progetto: **tasto tutto suo**
+  (decisione dell'utente 2026-08-22), perche' lo scatto ha gia' un potenziamento che fa danno e
+  sommarli avrebbe reso impossibile capire quale dei due stava facendo cosa.
+  ⚠️ Dentro all'update va chiamato PER ULTIMO, dopo `comandiDelGiocatore`: quello riscrive la
+  velocita' del personaggio ogni fotogramma, e col trapano prima la carica non partiva affatto.
+- **RAZZO.** Mira come proposto e approvato: parte nella direzione in cui miri e curva verso il
+  bersaglio piu' vicino DENTRO UN CONO davanti a se' (RAZZO_CONO ~31 gradi, RAZZO_CURVA 3,2 rad/s).
+  Il cono e la velocita' di correzione SONO la mira: senza cono giocherebbe il razzo al posto tuo.
+- **GRANATE.** ⚠️ Vinta la regola dell'utente, non la mia proposta: **3 per RUN, e a fine livello
+  se ne recupera UNA** (io proponevo 3 per livello). E' piu' avara ma piu' interessante: spenderle
+  costa davvero, e non conviene svuotare la scorta prima del traguardo. Sono le uniche a
+  MUNIZIONI invece che a ricarica, e infatti il pulsante mostra un numero invece della lancetta.
+  Non scoppiano al contatto: la miccia obbliga a tirarle dove i nemici SARANNO.
 
-## H.6 — UN SOLO LEGGENDARIO EQUIPAGGIATO PER RUN (deciso dall'utente, 2026-08-21)
-Con piu' leggendari non si possono aggiungere N pulsanti a schermo: lo spazio dei comandi e' gia'
-pieno (leva, salto, spruzzo, scatto, bomba). **Decisione dell'utente: se ne equipaggia UNO per
-run.** Il pulsante a schermo resta quindi sempre uno solo, qualunque sia il leggendario scelto.
-Da fare quando esistera' il SECONDO leggendario — con uno solo la scelta non ha nulla fra cui
-scegliere e sarebbe un passaggio in piu' per niente.
-**Dove metterlo:** esiste gia' `ArmiScene` (l'ARSENALE), una schermata di scelta PRIMA della run,
-oggi chiusa da una riga in state.js (`const scelta = 'fioc'`). E' il posto naturale: nasce per
-questo, e riaprirla costa meno che inventare un'altra schermata.
-⚠️ Attenzione al pulsante: oggi `touch.js` lo disegna se `player.bomba`. Con la scelta diventera'
-"se c'e' un leggendario equipaggiato", e l'icona dovra' dipendere da QUALE — quindi serve un campo
-`icona` sul leggendario, non un `if` per ognuno.
+⚠️ **I BOSS.** La bomba non li tocca affatto (scelta del 2026-08-19). Gli altri quattro li
+colpiscono ma SCONTATI (`CONFIG.DANNO_BOSS_LEGG`, 35%): colpiscono un bersaglio alla volta, e
+renderli inerti sul boss avrebbe consegnato al giocatore un tasto che proprio quando serve non fa
+niente. Uno sconto secco e' onesto in tutte e due le direzioni.
+
+## H.6 — UN SOLO LEGGENDARIO EQUIPAGGIATO PER RUN ✅ FATTO (2026-08-23)
+Se ne compra quanti se ne vuole, se ne porta in campo **uno solo per run**. Il pulsante a schermo
+resta quindi sempre uno, nello stesso posto: cambia solo il disegno sopra (`icona` del leggendario,
+disegnata da `touch.js`).
+⚠️ **La scelta si fa nel NEGOZIO, non nell'Arsenale** come diceva il progetto: l'Arsenale delle
+armi e' ancora chiuso (`const scelta = 'fioc'` in state.js), e un leggendario comprato ma non
+equipaggiabile sarebbe stato un acquisto senza effetto. Nella pagina dei leggendari ogni riga gia'
+comprata mostra EQUIPAGGIA oppure IN CAMPO.
+⚠️ `Meta.leggendarioEquipaggiato()` non restituisce il nome salvato senza guardarlo: un
+salvataggio vecchio puo' nominare un leggendario che non si possiede piu', e il giocatore si
+troverebbe un tasto che non fa niente. Se il nome non vale, ripiega sul primo posseduto.
 
 ## H.5 — ARMI: PERCHE' NON FUNZIONAVANO (dall'utente, 2026-08-19)
 I 5 kit dell'Arsenale erano stati bocciati. Il motivo, detto dall'utente:

@@ -133,8 +133,13 @@ class ShopScene extends Phaser.Scene {
     // Pulsante / stato a destra
     const bx = x + panelW / 2 - 62;
     const enough = window.Meta.get().bank >= o.cost;
-    let label, bg, fg, clickable = false;
-    if (o.done) { label = o.doneLabel; bg = '#3a2430'; fg = '#a58b96'; }
+    let label, bg, fg, clickable = false, azione = o.onBuy;
+    // Tre stati in piu' dei soliti due, per i LEGGENDARI: se ne possiede piu' d'uno ma se ne
+    // porta in campo uno solo, quindi una riga puo' essere "gia' comprata E in uso" oppure
+    // "gia' comprata ma in panchina" — e quest'ultima deve restare cliccabile.
+    if (o.inUso) { label = o.inUsoLabel; bg = '#3f5a3f'; fg = '#cfe9cf'; }
+    else if (o.onEquip) { label = o.equipLabel; bg = '#ffd166'; fg = '#1c0a12'; clickable = true; azione = o.onEquip; }
+    else if (o.done) { label = o.doneLabel; bg = '#3a2430'; fg = '#a58b96'; }
     else if (enough) { label = o.buyLabel; bg = '#ffd166'; fg = '#1c0a12'; clickable = true; }
     else { label = T.t('shop_need', { cost: o.cost }); bg = '#4a1f2a'; fg = '#d9a3b0'; }
 
@@ -147,7 +152,7 @@ class ShopScene extends Phaser.Scene {
       btn.setInteractive({ useHandCursor: true });
       btn.on('pointerover', () => btn.setStyle({ backgroundColor: '#ffe199' }));
       btn.on('pointerout', () => btn.setStyle({ backgroundColor: '#ffd166' }));
-      btn.on('pointerdown', o.onBuy);
+      btn.on('pointerdown', azione);
     }
   }
 
@@ -261,6 +266,7 @@ class ShopScene extends Phaser.Scene {
       const item = LEG[id];
       const svelato = window.Meta.gradiSuperati() > (item.infezione | 0);
       const posseduto = window.Meta.unlockLevel(id) > 0;
+      const inCampo = posseduto && window.Meta.leggendarioEquipaggiato() === id;
       this.makeRow(cx, startY + i * 64, colW, {
         name: svelato ? T.t('leg_' + id + '_name') : '? ? ?',
         sub: svelato ? T.t('leg_' + id + '_desc') : T.t('shop_leg_chiuso', { n: item.infezione | 0 }),
@@ -270,6 +276,13 @@ class ShopScene extends Phaser.Scene {
         cost: item.cost,
         buyLabel: T.t('shop_unlock', { cost: item.cost }),
         onBuy: () => this.buyLeggendario(id),
+        // ⚠️ SI EQUIPAGGIA DA QUI, non dall'Arsenale: l'Arsenale delle armi e' ancora chiuso
+        // (vedi MenuScene), e un leggendario comprato che non si puo' portare in campo sarebbe
+        // un acquisto senza effetto.
+        inUso: inCampo,
+        inUsoLabel: T.t('leg_incampo'),
+        equipLabel: T.t('leg_equipaggia'),
+        onEquip: posseduto && !inCampo ? () => this.equipaggiaLeggendario(id) : null,
       });
     });
 
@@ -312,6 +325,13 @@ class ShopScene extends Phaser.Scene {
     if (window.Meta.gradiSuperati() <= (item.infezione | 0)) { window.Sfx.hurt(); return; }
     if (!window.Meta.spend(item.cost)) { window.Sfx.hurt(); return; }
     window.Meta.setUnlock(id, 1);
+    window.Sfx.pick();
+    this.scene.restart({ pagina: this.pagina });
+  }
+
+  // Porta in campo un leggendario gia' comprato (uno solo per run).
+  equipaggiaLeggendario(id) {
+    if (!window.Meta.equipaggiaLeggendario(id)) { window.Sfx.hurt(); return; }
     window.Sfx.pick();
     this.scene.restart({ pagina: this.pagina });
   }

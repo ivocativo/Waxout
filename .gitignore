@@ -48,3 +48,7 @@ schermata*.png
 
 # Cache di Python creata quando gli strumenti in tools/ si importano fra loro
 __pycache__/
+
+# Screenshot e GIF generati da tools/foto.py: materiale di lavoro, non del gioco
+foto_*.png
+foto_*.gif

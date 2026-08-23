@@ -1636,6 +1636,263 @@ window.__earwaxChecks = function (opts) {
     }
   }
 
+
+  // ------------------------------------------------------- LEGGENDARI (2026-08-23)
+  // Aiutante: mette in campo un leggendario come se fosse stato comprato ed equipaggiato.
+  // ⚠️ Passa da Meta e non scrive solo dentro al giocatore: il pulsante a schermo e il negozio
+  // leggono da Meta, e una prova che salta quel giro proverebbe meta' del meccanismo.
+  const equipaggia = (gs, id) => {
+    window.Meta.setUnlock(id, 1);
+    window.Meta.equipaggiaLeggendario(id);
+    window.GameState.player.leggendario = id;
+    window.GameState.bombaPronta = 0;
+    window.GameState.granate = window.CONFIG.GRANATE_MAX;
+    window.GameState.granataPronta = 0;
+  };
+
+  // [45] OGNI LEGGENDARIO ESISTE PER INTERO. Non e' un controllo formale: le voci del negozio si
+  // generano da window.LEGGENDARI, quindi basta dimenticare una scritta o un'icona perche' in
+  // negozio compaia una riga senza nome e in partita un pulsante vuoto — e nessuno se ne accorge
+  // finche' non lo compra un giocatore. (E' gia' successo con l'ugello: elenco scritto a mano.)
+  {
+    const mancanti = [];
+    const T = window.I18n;
+    Object.keys(window.LEGGENDARI).forEach((id) => {
+      const item = window.LEGGENDARI[id];
+      if (T.t('leg_' + id + '_name') === 'leg_' + id + '_name') mancanti.push(id + ': nome');
+      if (T.t('leg_' + id + '_desc') === 'leg_' + id + '_desc') mancanti.push(id + ': descrizione');
+      if (!item.icona) mancanti.push(id + ': icona');
+      if (item.ability !== 'granata' && !window.CONFIG[GameScene.RICARICHE[item.ability]]) {
+        mancanti.push(id + ': ricarica');
+      }
+    });
+    const n = Object.keys(window.LEGGENDARI).length;
+    if (!mancanti.length) ok('ogni leggendario ha nome, icona e ricarica', '-', n + ' leggendari completi');
+    else ko('ogni leggendario ha nome, icona e ricarica', '-', mancanti.join(' | '));
+  }
+
+  // [46] IL TASTO FA PARTIRE TUTTI I LEGGENDARI, E LI METTE IN RICARICA.
+  // ⚠️ Si preme il TASTO invece di chiamare a mano il metodo del potere: il difetto piu' probabile
+  // non e' dentro al potere, e' nel giro che ci arriva (il tasto letto nel punto sbagliato, la
+  // ricarica azzerata, il leggendario non riconosciuto). Chiamando il metodo si salterebbe
+  // esattamente la parte che si rompe.
+  {
+    const guasti = [];
+    Object.keys(window.LEGGENDARI).forEach((id) => {
+      const gsL = avviaLivello(3);
+      equipaggia(gsL, id);
+      gsL.touch.bombaQueued = true;
+      const granatePrima = window.GameState.granate;
+      avanza(gsL, 3);
+      const item = window.LEGGENDARI[id];
+      if (item.ability === 'granata') {
+        if (window.GameState.granate !== granatePrima - 1) guasti.push(id + ': non ha consumato la granata');
+        if (!(gsL.granateVive || []).length) guasti.push(id + ': nessuna granata in volo');
+      } else if (!(window.GameState.bombaPronta > 0)) {
+        guasti.push(id + ': non e andato in ricarica');
+      }
+      if (id === 'razzo' && !(gsL.razziVivi || []).length) guasti.push('razzo: nessun razzo in volo');
+      if (id === 'trapano' && !gsL._trapanoFino) guasti.push('trapano: non e partito');
+    });
+    if (!guasti.length) ok('il tasto fa partire tutti i leggendari', 3,
+      Object.keys(window.LEGGENDARI).length + ' leggendari provati col pulsante a schermo');
+    else ko('il tasto fa partire tutti i leggendari', 3, guasti.join(' | '));
+  }
+
+  // [47] LE GRANATE: tre per run, e a fine livello ne torna UNA SOLA.
+  // ⚠️ La parte che conta e' "una sola": se tornassero tutte, tenersele da parte non avrebbe piu'
+  // senso e converrebbe sempre svuotare la scorta prima del traguardo.
+  {
+    const gsG = avviaLivello(3);
+    equipaggia(gsG, 'granata');
+    const partenza = window.GameState.granate;
+    for (let n = 0; n < 2; n++) {
+      window.GameState.granataPronta = 0;
+      gsG.usaLeggendario(1, 0);
+    }
+    const dopoDueLanci = window.GameState.granate;
+    gsG.levelComplete();
+    const dopoLivello = window.GameState.granate;
+    if (partenza === window.CONFIG.GRANATE_MAX && dopoDueLanci === partenza - 2
+        && dopoLivello === dopoDueLanci + 1) {
+      ok('granate: tre per run, una torna a fine livello', 3,
+        partenza + ' -> ' + dopoDueLanci + ' dopo due lanci -> ' + dopoLivello + ' a fine livello');
+    } else {
+      ko('granate: tre per run, una torna a fine livello', 3,
+        'partenza=' + partenza + ' dopo due lanci=' + dopoDueLanci + ' fine livello=' + dopoLivello);
+    }
+  }
+
+  // [48] IL LASER COLPISCE DAVANTI E NON ALLE SPALLE.
+  // ⚠️ Un raggio che colpisce anche dietro non e' un difetto "estetico": e' il potere che smette
+  // di chiedere al giocatore di mettersi in fila coi nemici, cioe' l'unica cosa che lo distingue
+  // dal razzo. Facile da sbagliare, perche' la distanza da una RETTA non sa niente di verso.
+  {
+    const gsL = avviaLivello(3);
+    equipaggia(gsL, 'laser');
+    gsL.facing = 1;
+    const davanti = gsL.spawnEnemy('blob', { x: gsL.player.x + 260 });
+    const dietro = gsL.spawnEnemy('blob', { x: gsL.player.x - 260 });
+    if (!davanti || !dietro) {
+      ko('il laser colpisce davanti e non alle spalle', 3, 'nemici di prova non creati');
+    } else {
+      davanti.spawning = false; dietro.spawning = false;
+      davanti.y = gsL.player.y; dietro.y = gsL.player.y;
+      const vd = davanti.hp, vr = dietro.hp;
+      gsL.sparaLaser(1, 0);
+      const colpitoDavanti = !davanti.active || davanti.hp < vd;
+      const colpitoDietro = !dietro.active || dietro.hp < vr;
+      if (colpitoDavanti && !colpitoDietro) {
+        ok('il laser colpisce davanti e non alle spalle', 3,
+          'davanti ' + vd + ' -> ' + (davanti.active ? davanti.hp : 'morto') + ', dietro intatto');
+      } else {
+        ko('il laser colpisce davanti e non alle spalle', 3,
+          'davanti colpito=' + colpitoDavanti + ' dietro colpito=' + colpitoDietro);
+      }
+    }
+  }
+
+  // [49] IL RAZZO CURVA SU CHI E' DENTRO AL CONO E IGNORA CHI E' FUORI.
+  // ⚠️ E' la mira che l'utente ha approvato: parte dove punti e corregge un po'. Senza il cono
+  // sarebbe il razzo a giocare al posto tuo; senza la curva sarebbe un colpo dritto qualunque.
+  // Si misura l'ANGOLO del razzo, non se il nemico muore: e' l'angolo la cosa decisa qui.
+  {
+    const gsR = avviaLivello(3);
+    equipaggia(gsR, 'razzo');
+    gsR.facing = 1;
+    // ⚠️ CAMPO SGOMBRO: il razzo scoppia appiccicandosi al primo nemico che sfiora, e con quelli
+    // che il livello fa nascere da solo la prova dipenderebbe da chi passa di li' — a volte
+    // passa, a volte no. Si toglie di mezzo tutto e si lascia un bersaglio solo.
+    gsR.enemies.getChildren().slice().forEach((e) => e.destroy());
+    // Bersaglio DENTRO il cono: davanti e leggermente in alto.
+    const dentro = gsR.spawnEnemy('blob', { x: gsR.player.x + 300 });
+    if (!dentro) {
+      ko('il razzo curva verso il bersaglio davanti', 3, 'nemico di prova non creato');
+    } else {
+      dentro.spawning = false;
+      dentro.y = gsR.player.y - 90;
+      gsR.lanciaRazzo(1, 0);                    // sparato dritto in orizzontale
+      const r = (gsR.razziVivi || [])[0];
+      const angPartenza = r ? r._ang : 0;
+      // ⚠️ Si guarda l'ULTIMO angolo da vivo, non quello dopo N fotogrammi: il razzo puo'
+      // arrivare sul bersaglio e scoppiare prima della fine del conto, e trovarlo morto non
+      // vuol dire che non ha curvato — vuol dire che ha fatto centro.
+      let angDopo = angPartenza, vissuto = 0;
+      for (let n = 0; n < 12 && r && r.active; n++) { avanza(gsR, 1); if (!r.active) break; angDopo = r._ang; vissuto++; }
+      // Deve essersi girato VERSO L'ALTO (angolo negativo) ma non essersi ribaltato.
+      const curvato = vissuto > 0 && angDopo < angPartenza - 0.05 && Math.abs(angDopo) < 1.2;
+      if (curvato) {
+        ok('il razzo curva verso il bersaglio davanti', 3,
+          'angolo ' + angPartenza.toFixed(2) + ' -> ' + angDopo.toFixed(2) + ' rad verso il nemico');
+      } else {
+        ko('il razzo curva verso il bersaglio davanti', 3,
+          'partenza=' + angPartenza + ' ultimo=' + angDopo + ' fotogrammi da vivo=' + vissuto);
+      }
+    }
+  }
+
+  // [50] IL TRAPANO MUOVE IL PERSONAGGIO E MACINA QUELLO CHE ATTRAVERSA.
+  // ⚠️ Il pezzo fragile e' l'ORDINE dentro all'update: i comandi del giocatore scrivono la
+  // velocita' ogni fotogramma, e se il trapano gira prima di loro la carica non parte affatto
+  // (succedeva davvero al primo tentativo).
+  {
+    const gsT = avviaLivello(3);
+    equipaggia(gsT, 'trapano');
+    gsT.facing = 1;
+    // ⚠️ Tratto LIBERO: un cumulo di cerume davanti fermerebbe la carica e il controllo
+    // fallirebbe per un motivo che non c'entra niente con quello che vuole provare.
+    for (let d = 0; d < 900; d += 40) {
+      const x = gsT.player.x + d;
+      if (pulito(gsT, x) && pulito(gsT, x + 130)) { gsT.player.x = x; break; }
+    }
+    const bersaglio = gsT.spawnEnemy('blob', { x: gsT.player.x + 70 });
+    const xPrima = gsT.player.x;
+    if (!bersaglio) {
+      ko('il trapano avanza e macina', 3, 'nemico di prova non creato');
+    } else {
+      bersaglio.spawning = false;
+      bersaglio.y = gsT.player.y;
+      const vita = bersaglio.hp;
+      gsT.trapanata();
+      avanza(gsT, 18);
+      const avanzato = gsT.player.x - xPrima;
+      const macinato = !bersaglio.active || bersaglio.hp < vita;
+      if (avanzato > 40 && macinato) {
+        ok('il trapano avanza e macina', 3,
+          'avanzato ' + Math.round(avanzato) + 'px e il nemico e stato '
+          + (bersaglio.active ? 'ferito' : 'eliminato'));
+      } else {
+        ko('il trapano avanza e macina', 3,
+          'avanzato=' + Math.round(avanzato) + 'px macinato=' + macinato);
+      }
+    }
+  }
+
+  // [51] I LEGGENDARI NON DECIDONO UNO SCONTRO DI BOSS.
+  // ⚠️ Regola gemella di quella della bomba, ma diversa: la bomba non lo tocca affatto, gli altri
+  // lo toccano SCONTATI (CONFIG.DANNO_BOSS_LEGG). Se lo sconto sparisse, un boss cadrebbe premendo
+  // un tasto; se diventasse zero, il giocatore si troverebbe un tasto inerte proprio quando serve.
+  {
+    const gsB = avviaLivello(5);
+    equipaggia(gsB, 'laser');
+    let boss = null;
+    for (let n = 0; n < 400 && !boss; n++) {
+      avanza(gsB, 1);
+      boss = gsB.enemies.getChildren().find((e) => e.active && e.kind === 'boss');
+    }
+    if (!boss) {
+      ko('i leggendari colpiscono il boss ma scontati', 5, 'boss mai comparso');
+    } else {
+      boss.spawning = false;
+      boss.y = gsB.player.y;
+      gsB.player.x = boss.x - 200;
+      gsB.facing = 1;
+      const vita = boss.hp;
+      const pieno = Math.max(1, Math.round(window.GameState.player.damage * window.CONFIG.LASER_DANNO));
+      gsB.sparaLaser(1, 0);
+      const tolto = vita - boss.hp;
+      // Deve aver fatto male, ma meno del colpo pieno: e' esattamente cio' che dice lo sconto.
+      if (tolto > 0 && tolto < pieno) {
+        ok('i leggendari colpiscono il boss ma scontati', 5,
+          'tolti ' + tolto + ' punti invece di ' + pieno + ' (sconto '
+          + Math.round(window.CONFIG.DANNO_BOSS_LEGG * 100) + '%)');
+      } else {
+        ko('i leggendari colpiscono il boss ma scontati', 5,
+          'tolti=' + tolto + ' colpo pieno=' + pieno);
+      }
+    }
+  }
+
+  // [52] NIENTE ROBA DEL LIVELLO PRECEDENTE.
+  // ⚠️ La scena di gioco e' SEMPRE LO STESSO OGGETTO: `create()` rigira a ogni livello, ma i campi
+  // che nessuno azzera restano pieni di cose distrutte insieme al livello vecchio. Non e' teoria:
+  // succedeva davvero, e la conseguenza peggiore non era il razzo fantasma ma la NEBBIA
+  // DELL'ASSEDIO INVISIBILE dal secondo assedio in poi — si sarebbero spostati i batuffoli di un
+  // livello che non esiste piu'. Un difetto che nessun playtest breve avrebbe trovato.
+  {
+    const gs1 = avviaLivello(3);
+    equipaggia(gs1, 'razzo');
+    gs1.lanciaRazzo(1, 0);
+    gs1.valangaX = gs1.player.x - 300;    // dietro al giocatore: niente danno durante la prova
+    gs1.valangaVel = 0;
+    gs1.avanzaValanga(16);
+    const razziPrima = (gs1.razziVivi || []).length;
+    const nebbiaPrima = (gs1.nebbia || []).length;
+
+    const gs2 = avviaLivello(4);
+    const razziDopo = (gs2.razziVivi || []).length;
+    const nebbiaDopo = (gs2.nebbia || []).length;
+    if (razziPrima > 0 && nebbiaPrima > 0 && razziDopo === 0 && nebbiaDopo === 0) {
+      ok('il livello nuovo non eredita poteri e nebbia del vecchio', 4,
+        'nel livello prima: ' + razziPrima + ' razzo e ' + nebbiaPrima
+        + ' batuffoli di nebbia; nel livello dopo: zero di entrambi');
+    } else {
+      ko('il livello nuovo non eredita poteri e nebbia del vecchio', 4,
+        'prima razzi=' + razziPrima + ' nebbia=' + nebbiaPrima
+        + ' | dopo razzi=' + razziDopo + ' nebbia=' + nebbiaDopo);
+    }
+  }
+
   // [42] L'ARCO DELLA BASTONATA E' UN QUARTO DI CERCHIO IN TUTTI E DUE I VERSI (2026-08-19).
   // Segnalato dal playtest: colpendo verso sinistra si disegnavano TRE QUARTI di cerchio attorno
   // al personaggio invece del quarto corrispondente al gesto. La causa: per specchiare l'arco gli

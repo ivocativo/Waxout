@@ -11,7 +11,7 @@ window.Meta = (function () {
     // giocare solo al grado 0; vincere al grado N lo porta a max(N, attuale), sbloccando N+1.
     // arma = kit dell'ARSENALE scelto per la prossima run (window.ARMI). Gli sblocchi delle armi
     // stanno dentro `unlocks` con la chiave 'arma_<id>', cosi' riusano spend/setUnlock esistenti.
-    return { bank: 0, bestLevel: 1, runs: 0, wins: 0, infezioneMax: -1, arma: 'fioc', unlocks: {} };
+    return { bank: 0, bestLevel: 1, runs: 0, wins: 0, infezioneMax: -1, arma: 'fioc', leggendario: '', unlocks: {} };
   }
 
   function load() {
@@ -27,6 +27,8 @@ window.Meta = (function () {
         wins: data.wins || 0,   // round A, A.1: run PORTATE A TERMINE (non solo giocate)
         infezioneMax: (typeof data.infezioneMax === 'number') ? data.infezioneMax : -1,
         arma: data.arma || 'fioc',
+        leggendario: data.leggendario || '',   // '' = nessuno scelto: decide leggendarioEquipaggiato
+
         unlocks: Object.assign({}, data.unlocks || {}),
       };
     } catch (e) { return defaults(); }
@@ -116,6 +118,28 @@ window.Meta = (function () {
     setArma(id) {
       if (!this.armaPosseduta(id)) return false;
       state.arma = id; save(); return true;
+    },
+
+    // ---- LEGGENDARI: comprati per sempre, ma UNO SOLO in campo per run ----
+    leggendarioPosseduto(id) { return !!(window.LEGGENDARI || {})[id] && state.unlocks[id] > 0; },
+
+    leggendariPosseduti() {
+      return Object.keys(window.LEGGENDARI || {}).filter((id) => state.unlocks[id] > 0);
+    },
+
+    // Quale si porta in campo. ⚠️ NON restituisce quello salvato senza guardarlo: il salvataggio
+    // puo' nominare un leggendario che non si possiede piu' (azzeramento dei dati, o una versione
+    // vecchia del gioco), e in quel caso il giocatore si troverebbe un tasto che non fa niente.
+    // Se il nome salvato non vale, si ripiega sul primo posseduto: chi ne ha comprato uno solo
+    // non deve nemmeno passare dall'Arsenale per usarlo.
+    leggendarioEquipaggiato() {
+      if (this.leggendarioPosseduto(state.leggendario)) return state.leggendario;
+      return this.leggendariPosseduti()[0] || null;
+    },
+
+    equipaggiaLeggendario(id) {
+      if (!this.leggendarioPosseduto(id)) return false;
+      state.leggendario = id; save(); return true;
     },
 
     // Solo per test/debug: azzera tutto.
