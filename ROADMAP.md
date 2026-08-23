@@ -41,12 +41,43 @@ due idee dell'utente:
 **Raccomandazione: A.** E' l'unica delle due che tocca il motivo per cui si campeggia. B si puo'
 aggiungere sopra, come rifinitura, ma non al posto di A.
 
+**⚠️ COSA SUCCEDE AI NEMICI DENTRO LA VALANGA — la domanda che decide il progetto.**
+Sollevata dall'utente: se la valanga li uccide, conviene scappare e lasciare che faccia il lavoro
+al posto tuo, e l'assedio (che chiede di UCCIDERE una quota) si gioca da solo.
+**Soluzione scelta: la valanga NON tocca i nemici.** Sono fatti di cerume: ci stanno dentro come a
+casa loro, e ne ESCONO dal fronte continuando a inseguirti. Tre vantaggi in un colpo:
+ 1. nessun incentivo a seminare i nemici — devi ucciderli tu, sempre;
+ 2. sparisce il problema del "nemico nato dietro il muro e irraggiungibile": ne esce da solo;
+ 3. e' coerente col mondo, anzi e' bello da vedere — l'onda che li sputa fuori.
+Scartate: farla uccidere SENZA contare per la quota (il giocatore vede morire un nemico e il
+contatore fermo: sembra un difetto), e farla uccidere contando (rompe la modalita').
+
 **Terza strada, se A risultasse troppo dura:** la quota dell'assedio legata a ZONE — il conteggio
 avanza solo per i nemici eliminati vicino a un punto che si sposta lungo il condotto. Costringe a
 spostarsi senza minacciare di morte, ma e' piu' codice e piu' difficile da spiegare al giocatore.
 
 ⚠️ Da fare INSIEME alla verifica dal vivo dell'assedio, che nel backlog e' segnata come mai
 avvenuta ("Verificare dal vivo il tipo Assedio, mai giocato davvero").
+
+## H.8 — I PROSSIMI LEGGENDARI (scelti con l'utente, 2026-08-21)
+Approvati: **RAGGIO LASER** e **TRAPANO**. In valutazione: razzi e granate.
+Criterio, dopo la lezione delle armi: ogni leggendario deve avere un RUOLO diverso, non piu'
+potenza. La Bomba occupa gia' il posto del "pulsante d'emergenza".
+
+- **RAGGIO LASER** (da fare per primo). Fascio continuo mentre tieni premuto, attraversa i nemici
+  in fila. ⚠️ Il pregio nascosto: non avendo colpi, IL PROBLEMA DELLA CADENZA NON SI PONE — non
+  puo' essere un malus travestito, che e' la trappola in cui erano cadute le armi dell'Arsenale.
+- **TRAPANO**. Lo scatto diventa una trivella: attraversa nemici e cerume mentre scatti. Riusa lo
+  scatto che c'e' gia', quindi costa poco, ed e' il piu' "da pulizia dell'orecchio" di tutti.
+- **RAZZI — la mira.** L'utente propone che vadano verso il nemico piu' vicino. ⚠️ Un
+  inseguimento puro toglie ogni merito alla mira: spari a caso e prendi comunque. Proposta:
+  partono nella DIREZIONE IN CUI MIRI e poi curvano dolcemente verso il bersaglio piu' vicino
+  DENTRO UN CONO davanti a te. Perdoni l'imprecisione senza regalare il colpo.
+- **GRANATE — 3 per partita, senza ricarica** (idea dell'utente). ⚠️ Attenzione al difetto noto
+  dei consumabili scarsi: se sono 3 per l'INTERA RUN, il giocatore le tiene da parte per il
+  momento giusto e finisce la run senza averle usate — succede in ogni gioco che ha oggetti
+  finiti. Proposta: **3 per LIVELLO**, che si ricaricano cambiando livello. Restano finite dentro
+  al singolo scontro (quindi ogni lancio e' una scelta) ma si usano davvero.
 
 ## H.6 — UN SOLO LEGGENDARIO EQUIPAGGIATO PER RUN (deciso dall'utente, 2026-08-21)
 Con piu' leggendari non si possono aggiungere N pulsanti a schermo: lo spazio dei comandi e' gia'

@@ -1913,6 +1913,33 @@ class GameScene extends Phaser.Scene {
 
   // ---------- Combattimento ----------
 
+  // Texture procedurale della SCHEGGIA della Regina.
+  // ⚠️ STESSA CAUSA DELLA PALLINA CURA: era `wax_glob` con setTint(0xc98a5a), cioe' cerume ambrato
+  // ritinto d'ambra, che corre su un terreno ambrato — "poco visibile rispetto al terreno"
+  // (playtest 2026-08-21). E la tinta MOLTIPLICA, quindi non poteva schiarirla in nessun modo.
+  // Qui la scheggia ha una forma sua: scaglia appuntita con BORDO SCURO spesso e cuore chiaro.
+  // ⚠️ E' il bordo scuro a fare il lavoro, non il colore del cuore: il fondo del gioco e' di
+  // mezzitoni caldi, e qualunque tinta calda ci si perde dentro. Un contorno quasi nero stacca
+  // da qualsiasi sfondo, ed e' anche quello che si legge meglio in movimento.
+  makeScheggiaTexture() {
+    if (this.textures.exists('scheggia')) return;
+    const g = this.make.graphics({ x: 0, y: 0, add: false });
+    const S = 20, c = S / 2;
+    // contorno scuro: una scaglia a quattro punte
+    g.fillStyle(0x2a1208, 1);
+    g.fillTriangle(c, 0, S, c, c, S);
+    g.fillTriangle(c, 0, 0, c, c, S);
+    // cuore chiaro, piu' piccolo: lascia il bordo scuro tutt'attorno
+    g.fillStyle(0xffe9a8, 1);
+    g.fillTriangle(c, 3.5, S - 3.5, c, c, S - 3.5);
+    g.fillTriangle(c, 3.5, 3.5, c, c, S - 3.5);
+    // scintilla in alto: da' un punto di luce che si nota anche mentre rotola
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(c - 1.5, c - 3, 1.8);
+    g.generateTexture('scheggia', S, S);
+    g.destroy();
+  }
+
   // Texture procedurale della PALLINA CURA: nessun file, come quella del getto.
   // ⚠️ PERCHE' NON BASTA UNA TINTA. Prima la cura era la stessa immagine del cerume
   // (`wax_glob`) con `setTint(0xff8fae)` sopra, ed era "poco distinguibile" (playtest
@@ -2516,9 +2543,11 @@ class GameScene extends Phaser.Scene {
   // SCHEGGIA DELLA REGINA: corre a terra SEGUENDO il profilo del terreno (per questo le colline
   // non la fanno saltellare) e ferisce al contatto. Si scavalca col salto.
   lanciaScheggia(e, verso) {
-    const sc = this.movers.create(e.x + verso * 40, this.terrainTopAt(e.x + verso * 40) - 10, 'wax_glob')
-      .setDepth(8).setScale(0.85);
-    sc.setTint(0xc98a5a);
+    // La texture si crea qui, nel punto in cui serve: cosi' non dipende dall'ordine dei passi
+    // di create() — e' la stessa trappola che alla prima run rendeva invisibile la croce della cura.
+    this.makeScheggiaTexture();
+    const sc = this.movers.create(e.x + verso * 40, this.terrainTopAt(e.x + verso * 40) - 10, 'scheggia')
+      .setDepth(9).setScale(0.95);
     sc.body.setAllowGravity(false);
     sc.setVelocityX(verso * 240);
     sc.scheggia = true;
