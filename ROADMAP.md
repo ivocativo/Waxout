@@ -82,8 +82,11 @@ spostarsi senza minacciare di morte, ma e' piu' codice e piu' difficile da spieg
 avvenuta ("Verificare dal vivo il tipo Assedio, mai giocato davvero").
 
 ## H.8 — I PROSSIMI LEGGENDARI ✅ FATTI (2026-08-23)
-Cinque leggendari, uno per grado di infezione: **bomba** (grado 0), **granate** (1), **laser** (2),
-**trapano** (3), **razzo** (4). Costi da 1.980 a 3.740.
+Cinque leggendari, uno per grado di infezione: **bomba** (grado 0), **granate** (1), **razzo** (2),
+**trapano** (3), **laser** (4). Costi da 1.980 a 3.740.
+⚠️ L'ordine e' stato cambiato dall'utente il 2026-08-24: **il laser per ultimo perche' e' il piu'
+potente**. L'ordine delle voci in `window.LEGGENDARI` e' anche l'ordine in cui il negozio le
+elenca, quindi le due cose restano allineate senza doverle tenere d'occhio.
 
 Come sono venuti, e cosa e' cambiato rispetto al progetto:
 - **RAGGIO LASER.** Fascio dritto che attraversa tutto in linea retta, colpo unico invece che

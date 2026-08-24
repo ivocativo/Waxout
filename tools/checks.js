@@ -247,7 +247,15 @@ window.__earwaxChecks = function (opts) {
         // visto il bug del 2026-07-22 (i nemici cadevano sotto il suolo mentre "emergevano",
         // perche' lo snap li salta ma la gravita' no). Chi emerge non deve MAI finire sotto.
         if (e.spawning) {
-          if (e.kind !== 'fly') {
+          // ⚠️ ...MA NON PRIMA CHE SI VEDA. La comparsa ha due tempi: prima il terreno si gonfia e
+          // la creatura e' INVISIBILE e volutamente sotto la superficie (e' li' che deve stare:
+          // sta per uscire da sotto), poi diventa visibile e sale. Contare anche il primo tempo
+          // segnalava un difetto che non esiste: misurato, il caso "sprofondato di 32px" aveva
+          // sempre `visible = false` e la gravita' spenta (2026-08-24, una volta ogni dodici
+          // livelli, identico anche sulla versione di due giorni prima).
+          // Il bug del 2026-07-22 che questo controllo deve prendere resta preso: li' i nemici
+          // cadevano MENTRE SI VEDEVANO, cioe' esattamente il caso ancora sorvegliato.
+          if (e.kind !== 'fly' && e.visible) {
             const giu = e.body.bottom - gs2.terrainTopAt(e.x);
             if (giu > sprofSpawn) sprofSpawn = giu;
           }
@@ -1974,6 +1982,49 @@ window.__earwaxChecks = function (opts) {
         'colpi ' + base.colpi + ' -> ' + alto.colpi + ' (devono aumentare), nemici in campo '
         + base.nemici + ' -> ' + alto.nemici + ' (devono aumentare)');
     }
+  }
+
+  // [55] IL PANNELLO INFO: TUTORIAL IN CIMA, E QUANDO IL TESTO ECCEDE SI PUO' SCORRERE.
+  // ⚠️ I crediti crescono a ogni brano nuovo, e in un pannello a misura fissa le righe in fondo
+  // sparirebbero senza che nessuno se ne accorga — nessuno riapre l'INFO dopo la prima volta. Il
+  // controllo verifica proprio quello: che il contenuto piu' alto della finestra abbia la barra
+  // di scorrimento, e che il tutorial resti la prima cosa che si legge (chiesto dall'utente).
+  {
+    g.scene.start('MenuScene');
+    const ms = g.scene.getScene('MenuScene');
+    avanza(ms, 8);
+    const T = window.I18n;
+    const bottone = ms.children.list.find((o) => o.type === 'Text' && o.text === T.t('menu_info'));
+    if (!bottone) {
+      ko('info: tutorial in cima e pannello scorrevole', '-', 'il pulsante INFO non esiste nel menu');
+    } else {
+      bottone.emit('pointerdown');
+      avanza(ms, 4);
+      const gruppi = ms.children.list.filter((o) => o.type === 'Container');
+      const gruppo = gruppi[gruppi.length - 1];
+      const contenuto = gruppo && gruppo.list.find((o) => o.type === 'Container');
+      const barra = gruppo && gruppo.list.find((o) => o.type === 'Rectangle' && o.width < 8);
+      const testi = contenuto ? contenuto.list.filter((o) => o.type === 'Text') : [];
+      const primo = testi.length ? testi.slice().sort((a, b) => a.y - b.y)[0] : null;
+      const altezza = contenuto ? contenuto.getBounds().height : 0;
+      const finestra = 398;                          // la finestrella visibile del pannello
+      const inCima = !!primo && primo.text === T.t('menu_tutorial_title');
+      const scorribile = altezza <= finestra || !!(barra && barra.visible);
+      const titoli = testi.map((o) => o.text).filter((t) => t === T.t('menu_ctrl_title')
+        || t === T.t('credits_title') || t === T.t('menu_tutorial_title'));
+      if (inCima && scorribile && titoli.length === 3) {
+        ok('info: tutorial in cima e pannello scorrevole', '-',
+          'sezioni: ' + titoli.join(' > ') + '; contenuto ' + Math.round(altezza)
+          + 'px in una finestra di ' + finestra + 'px, barra '
+          + (barra && barra.visible ? 'presente' : 'non serve'));
+      } else {
+        ko('info: tutorial in cima e pannello scorrevole', '-',
+          'primo titolo=' + (primo ? primo.text : 'nessuno') + ' sezioni trovate=' + titoli.length
+          + ' contenuto=' + Math.round(altezza) + 'px barra='
+          + (barra ? barra.visible : 'assente'));
+      }
+    }
+    g.scene.stop('MenuScene');
   }
 
   // [42] L'ARCO DELLA BASTONATA E' UN QUARTO DI CERCHIO IN TUTTI E DUE I VERSI (2026-08-19).

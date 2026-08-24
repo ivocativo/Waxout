@@ -29,7 +29,9 @@ window.I18n = (function () {
       menu_start: 'START RUN',
       menu_shop: 'SHOP',
       menu_infezione: 'Infection: {n}',
-      menu_help_close: 'Tap anywhere to close',
+      menu_help_close: 'Tap outside the panel to close',
+      menu_info: 'INFO',
+      menu_tutorial_title: 'HOW TO PLAY',
       menu_lang: 'Language: {lang}',
       // --- HUD ---
       hud_hp: 'HP {hp}/{max}',
@@ -170,6 +172,7 @@ window.I18n = (function () {
       pause_hint: 'ESC or P to resume',
       pause_resume: 'RESUME',
       pause_restart: 'RESTART LEVEL',
+      pause_newrun: 'NEW RUN',
       pause_menu: 'MAIN MENU',
       // --- Potenziamento (a fine livello) ---
       up_title: 'UPGRADE',
@@ -337,7 +340,9 @@ window.I18n = (function () {
       menu_start: 'INIZIA RUN',
       menu_shop: 'SHOP',
       menu_infezione: 'Infezione: {n}',
-      menu_help_close: 'Tocca ovunque per chiudere',
+      menu_help_close: 'Tocca fuori dal pannello per chiudere',
+      menu_info: 'INFO',
+      menu_tutorial_title: 'COME SI GIOCA',
       menu_lang: 'Lingua: {lang}',
       // --- HUD ---
       hud_hp: 'HP {hp}/{max}',
@@ -479,6 +484,7 @@ window.I18n = (function () {
       pause_hint: 'ESC o P per riprendere',
       pause_resume: 'RIPRENDI',
       pause_restart: 'RIAVVIA LIVELLO',
+      pause_newrun: 'NUOVA RUN',
       pause_menu: 'MENU PRINCIPALE',
       // --- Potenziamento (a fine livello) ---
       up_title: 'POTENZIAMENTO',

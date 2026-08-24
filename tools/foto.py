@@ -85,6 +85,22 @@ SCENE = {
     "trapano": _leggendario("trapano"),
     "razzo": _leggendario("razzo"),
     "granata": _leggendario("granata"),
+    # Il menu principale cosi' com'e'.
+    "menu": """
+        const g = window.game;
+        g.scene.start('MenuScene');
+        await new Promise(r => setTimeout(r, 900));
+    """,
+    # Il pannello INFO del menu, aperto: si controlla che le tre sezioni ci stiano e si scorrano.
+    "info": """
+        const g = window.game;
+        g.scene.start('MenuScene');
+        await new Promise(r => setTimeout(r, 700));
+        const m = g.scene.getScene('MenuScene');
+        const bottone = m.children.list.find((o) => o.text === window.I18n.t('menu_info'));
+        if (bottone) bottone.emit('pointerdown');
+        await new Promise(r => setTimeout(r, 400));
+    """,
     # Il negozio dei leggendari come lo vede chi ha vinto UNA volta al grado 0: e' la situazione
     # normale, e serve a controllare cosa si vede davvero invece di cosa si vede con tutto aperto.
     "leggendari_normale": """

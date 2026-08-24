@@ -134,14 +134,17 @@ class MenuScene extends Phaser.Scene {
     tarBtn.on('pointerdown', () => { window.Sfx.pick(); this.scene.start('TaraturaScene', { from: 'MenuScene' }); });
     }
 
-    // Pannello "?" con comandi/obiettivo, a comparsa (round 2, H.1): prima stava sempre in
-    // vista (9 righe fisse), affollando la schermata principale — i comandi touch sono gia'
-    // a schermo ed evidenti IN PARTITA, qui basta poterli ricontrollare a richiesta.
-    const helpBtn = this.add.circle(W / 2, 486, 16, 0x000000, 0.35).setStrokeStyle(2, 0xffd166, 0.8)
-      .setInteractive({ useHandCursor: true });
-    this.add.text(W / 2, 486, '?', {
-      fontFamily: 'monospace', fontSize: '18px', color: '#ffd166',
-    }).setOrigin(0.5);
+    // Pannello INFO (era un "?" tondo fino al 2026-08-24: l'utente ha chiesto la parola, perche'
+    // un punto interrogativo non dice cosa c'e' dentro).
+    // ⚠️ SCORREVOLE. Dentro ci sono tre sezioni — come si gioca, comandi, crediti — e i crediti
+    // sono destinati a crescere a ogni brano nuovo: un pannello a misura fissa avrebbe cominciato
+    // a tagliare le righe in fondo senza che nessuno se ne accorgesse.
+    const infoBtn = this.add.text(W / 2, 486, T.t('menu_info'), {
+      fontFamily: 'monospace', fontSize: '14px', color: '#ffd166',
+      backgroundColor: '#3a2430', padding: { x: 14, y: 6 },
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    infoBtn.on('pointerover', () => infoBtn.setStyle({ backgroundColor: '#523344' }));
+    infoBtn.on('pointerout', () => infoBtn.setStyle({ backgroundColor: '#3a2430' }));
     let helpOpen = null;
     const closeHelp = () => { if (helpOpen) { helpOpen.destroy(); helpOpen = null; } };
     const openHelp = () => {
@@ -149,46 +152,99 @@ class MenuScene extends Phaser.Scene {
       window.Sfx.unlock();
       const group = this.add.container(0, 0).setDepth(200);
       const backdrop = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.62).setInteractive();
-      const panelBg = window.GameGfx.panel(this, W / 2, H / 2, 640, 452, { accento: window.GameGfx.UI.ambraScura });
-      const lines = [
-        T.t('menu_ctrl_title'), '',
-        T.t('menu_ctrl_move'), T.t('menu_ctrl_jump'), T.t('menu_ctrl_attack'),
-        T.t('menu_ctrl_dash'), T.t('menu_ctrl_leg'), T.t('menu_ctrl_touch'), '',
-        T.t('menu_goal_1'), T.t('menu_goal_2'),
-      ];
-      const body = this.add.text(W / 2, H / 2 - 100, lines.join('\n'), {
-        fontFamily: 'monospace', fontSize: '15px', color: '#fff7e8', align: 'center',
-        stroke: '#14161f', strokeThickness: 3, lineSpacing: 3, wordWrap: { width: 560 },
-      }).setOrigin(0.5);
+      const PW = 660, PH = 460;
+      const panelBg = window.GameGfx.panel(this, W / 2, H / 2, PW, PH, { accento: window.GameGfx.UI.ambraScura });
+      // Finestrella entro cui si vede il contenuto: quello che esce di qui viene ritagliato.
+      const vX = W / 2 - PW / 2 + 24, vY = H / 2 - PH / 2 + 22;
+      const vW = PW - 48, vH = PH - 62;
 
-      // CREDITI (2026-07-28). Tutti i brani sono CC0 e non OBBLIGANO a citare nessuno, ma
-      // l'autore di quello del menu lo chiede esplicitamente sulla sua scheda ("you are committed
-      // to mention Rob Bery"), e chi regala musica merita il suo nome. Gli altri tre sono qui per
-      // correttezza. Testo piccolo e spento: si legge se lo cerchi, non ruba spazio ai comandi.
-      const righe = [
-        T.t('credits_music'),
-        T.t('credits_m1'), T.t('credits_m2'), T.t('credits_m3'), T.t('credits_m4'),
-        '', T.t('credits_engine'),
+      // TUTORIAL PER PRIMO (richiesta dell'utente): a chi apre questa schermata la prima volta
+      // serve sapere COSA deve fare, non quale tasto salta. I comandi si ricontrollano dopo.
+      const sezioni = [
+        { titolo: T.t('menu_tutorial_title'), colore: '#ffd166', dim: 15, corpo: [
+          T.t('menu_goal_1'), T.t('menu_goal_2'),
+        ] },
+        { titolo: T.t('menu_ctrl_title'), colore: '#ffd166', dim: 15, corpo: [
+          T.t('menu_ctrl_move'), T.t('menu_ctrl_jump'), T.t('menu_ctrl_attack'),
+          T.t('menu_ctrl_dash'), T.t('menu_ctrl_leg'), T.t('menu_ctrl_touch'),
+        ] },
+        // CREDITI. Tutti i brani sono CC0 e non OBBLIGANO a citare nessuno, ma l'autore di quello
+        // del menu lo chiede sulla sua scheda ("you are committed to mention Rob Bery"), e chi
+        // regala musica merita il suo nome. Gli altri sono qui per correttezza.
+        { titolo: T.t('credits_title'), colore: '#c9a6b2', dim: 12, corpo: [
+          T.t('credits_music'),
+          T.t('credits_m1'), T.t('credits_m2'), T.t('credits_m3'), T.t('credits_m4'),
+          '', T.t('credits_engine'),
+        ] },
       ];
-      const sep = this.add.graphics();
-      sep.fillStyle(window.GameGfx.UI.bordo, 0.6);
-      sep.fillRect(W / 2 - 240, H / 2 + 32, 480, 1);
-      const titoloCr = this.add.text(W / 2, H / 2 + 50, T.t('credits_title'), {
-        fontFamily: 'monospace', fontSize: '12px', color: '#ffd166',
-      }).setOrigin(0.5);
-      const crediti = this.add.text(W / 2, H / 2 + 116, righe.join('\n'), {
-        fontFamily: 'monospace', fontSize: '11px', color: '#c9a6b2', align: 'center', lineSpacing: 3,
-        wordWrap: { width: 580 },
-      }).setOrigin(0.5);
 
-      const hint = this.add.text(W / 2, H / 2 + 212, T.t('menu_help_close'), {
+      const contenuto = this.add.container(vX, vY);
+      let y = 0;
+      sezioni.forEach((sez, i) => {
+        if (i > 0) {
+          const sep = this.add.graphics();
+          sep.fillStyle(window.GameGfx.UI.bordo, 0.5);
+          sep.fillRect(0, y + 8, vW, 1);
+          contenuto.add(sep);
+          y += 24;
+        }
+        const tit = this.add.text(vW / 2, y, sez.titolo, {
+          fontFamily: 'monospace', fontSize: '14px', color: sez.colore,
+        }).setOrigin(0.5, 0);
+        contenuto.add(tit);
+        y += tit.height + 10;
+        const corpo = this.add.text(vW / 2, y, sez.corpo.join('\n'), {
+          fontFamily: 'monospace', fontSize: sez.dim + 'px',
+          color: sez.dim > 12 ? '#fff7e8' : '#c9a6b2', align: 'center',
+          lineSpacing: 4, wordWrap: { width: vW - 20 },
+        }).setOrigin(0.5, 0);
+        contenuto.add(corpo);
+        y += corpo.height + 14;
+      });
+      const altezza = y;
+
+      const maschera = this.make.graphics({ x: 0, y: 0, add: false });
+      maschera.fillStyle(0xffffff, 1);
+      maschera.fillRect(vX, vY, vW, vH);
+      contenuto.setMask(maschera.createGeometryMask());
+
+      // Barretta di scorrimento: senza, non si capisce che sotto c'e' altro — ed e' l'unica cosa
+      // che distingue "il testo finisce qui" da "il testo continua".
+      const scorrevole = Math.max(0, altezza - vH);
+      const barra = this.add.rectangle(vX + vW + 8, vY, 3, vH * Math.min(1, vH / altezza), 0xffd166, 0.5)
+        .setOrigin(0, 0).setVisible(scorrevole > 0);
+      let scorri = 0;
+      const applica = () => {
+        scorri = Phaser.Math.Clamp(scorri, 0, scorrevole);
+        contenuto.y = vY - scorri;
+        if (scorrevole > 0) barra.y = vY + (vH - barra.height) * (scorri / scorrevole);
+      };
+
+      // Si scorre trascinando (telefono) o con la rotellina (computer). ⚠️ La zona di presa sta
+      // SOPRA al fondo scuro: senza, il trascinamento arrivava al fondo e chiudeva il pannello.
+      const presa = this.add.zone(W / 2, H / 2, PW, PH).setInteractive({ draggable: false });
+      let ultimo = null;
+      presa.on('pointerdown', (p) => { ultimo = p.y; });
+      presa.on('pointermove', (p) => {
+        if (ultimo === null || !p.isDown) return;
+        scorri -= (p.y - ultimo); ultimo = p.y; applica();
+      });
+      presa.on('pointerup', () => { ultimo = null; });
+      const rotella = (p, sopra, dx, dy) => { scorri += dy * 0.5; applica(); };
+      this.input.on('wheel', rotella);
+      applica();
+
+      const hint = this.add.text(W / 2, H / 2 + PH / 2 - 18, T.t('menu_help_close'), {
         fontFamily: 'monospace', fontSize: '12px', color: '#cabfa0',
       }).setOrigin(0.5);
-      group.add([backdrop, panelBg, body, sep, titoloCr, crediti, hint]);
+      group.add([backdrop, panelBg, contenuto, barra, presa, hint]);
       backdrop.on('pointerdown', closeHelp);
+      // Alla chiusura si stacca la rotellina: restasse attaccata, ogni pannello aperto ne
+      // lascerebbe una copia in ascolto e lo scorrimento accelererebbe a ogni apertura.
+      group.once('destroy', () => { this.input.off('wheel', rotella); maschera.destroy(); });
       helpOpen = group;
     };
-    helpBtn.on('pointerdown', openHelp);
+    infoBtn.on('pointerdown', openHelp);
 
     // Selettore lingua: in alto a destra; toccarlo cambia lingua e ridisegna.
     const langBtn = this.add.text(W - 16, 16, T.t('menu_lang', { lang: T.nativeName(T.lang) }), {

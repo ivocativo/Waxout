@@ -106,7 +106,11 @@ window.CONFIG = {
   GRANATA_DANNO: 3.2,        // moltiplicatore sul danno corpo a corpo, nel raggio
   GRANATA_RAGGIO: 150,
   GRANATA_MICCIA: 900,       // ms prima dello scoppio (rotola: si puo' anticiparne l'arrivo)
-  GRANATA_PAUSA: 500,        // ms fra un lancio e l'altro, solo per non buttarle tutte insieme
+  // ms fra un lancio e l'altro. ⚠️ ABBASSATA da 500 a 180 (utente, 2026-08-24: "c'e' troppo
+  // countdown se voglio adoperarle a raffica"). Non serve a razionare — a razionare ci pensano le
+  // munizioni, che sono due o tre in tutto: serve solo a non svuotare la scorta con un dito che
+  // rimbalza sul pulsante. Con la scorta cosi' corta, il freno era una tassa e basta.
+  GRANATA_PAUSA: 180,
 
   // LASER: un raggio che attraversa TUTTO in linea retta. Non insegue e non curva: e' un colpo
   // da preparare mettendosi in fila con i nemici, ed e' quello che lo rende diverso dal getto.
@@ -123,7 +127,7 @@ window.CONFIG = {
   TRAPANO_DANNO: 2.2,        // moltiplicatore, applicato ogni TRAPANO_TIC a chi si attraversa
   TRAPANO_TIC: 140,
   TRAPANO_VEL: 620,
-  TRAPANO_DURATA: 420,       // ms di carica
+  TRAPANO_DURATA: 505,       // ms di carica (+20% sul primo valore, chiesto dall'utente)
 
   // RAZZO: parte dove miri e CURVA verso il bersaglio piu' vicino dentro un cono davanti a se'.
   // ⚠️ A MUNIZIONI come le granate (scelta dell'utente 2026-08-24): due per run, una torna a fine
@@ -306,14 +310,16 @@ window.BLUEPRINTS = {
 // una serie di "if" sparsi: azzeramento a inizio run, ricarica a fine livello, numero sul pulsante
 // e controlli automatici leggono tutti da qui, e cosi' un leggendario nuovo non puo' dimenticarne
 // un pezzo per strada.
+// ⚠️ L'ORDINE E' LA DIFFICOLTA' DI SBLOCCO, e l'elenco si legge dall'alto in basso anche in
+// negozio: il LASER e' l'ultimo perche' e' il piu' potente (scelta dell'utente 2026-08-24).
 window.LEGGENDARI = {
   bomba:   { cost: 1980, ability: 'bomba',   infezione: 0, icona: 'bomba' },
   granata: { cost: 2420, ability: 'granata', infezione: 1, icona: 'granata',
              scorta: 'granate', scortaMax: 'GRANATE_MAX' },
-  laser:   { cost: 2860, ability: 'laser',   infezione: 2, icona: 'laser' },
-  trapano: { cost: 3300, ability: 'trapano', infezione: 3, icona: 'trapano' },
-  razzo:   { cost: 3740, ability: 'razzo',   infezione: 4, icona: 'razzo',
+  razzo:   { cost: 2860, ability: 'razzo',   infezione: 2, icona: 'razzo',
              scorta: 'razzi', scortaMax: 'RAZZI_MAX' },
+  trapano: { cost: 3300, ability: 'trapano', infezione: 3, icona: 'trapano' },
+  laser:   { cost: 3740, ability: 'laser',   infezione: 4, icona: 'laser' },
 };
 
 // ARSENALE (2026-07-27, richiesta dell'utente). Ogni "arma" e' in realta' un KIT COMPLETO:

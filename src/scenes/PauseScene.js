@@ -27,9 +27,22 @@ class PauseScene extends Phaser.Scene {
       stroke: '#14161f', strokeThickness: 3,
     }).setOrigin(0.5);
 
-    window.GameGfx.uiButton(this, W / 2, H / 2 - 18, T.t('pause_resume'), () => this.resumeGame(), { w: 250, h: 46, size: 18 });
-    window.GameGfx.uiButton(this, W / 2, H / 2 + 42, T.t('pause_restart'), () => this.restartLevel(), { w: 250, h: 46, size: 18 });
-    window.GameGfx.uiButton(this, W / 2, H / 2 + 102, T.t('pause_menu'), () => this.toMenu(), { w: 250, h: 46, size: 18 });
+    // Quattro voci, non piu' tre: si e' ristretto il passo da 60 a 52 per farcele stare dentro al
+    // pannello senza allargarlo (i pulsanti restano alti 44, il pollice ci arriva lo stesso).
+    const voci = [
+      [T.t('pause_resume'), () => this.resumeGame()],
+      [T.t('pause_restart'), () => this.restartLevel()],
+      // NUOVA RUN direttamente da qui (richiesta dell'utente 2026-08-24): prima bisognava
+      // passare dal menu principale e premere di nuovo INIZIA RUN. Chi capisce a meta' partita
+      // che la run e' andata storta vuole ricominciare subito, non fare due schermate.
+      // ⚠️ Incassa il cerume raccolto, esattamente come abbandonare: ricominciare non deve
+      // costare piu' che uscire, o diventa una punizione nascosta.
+      [T.t('pause_newrun'), () => this.nuovaRun()],
+      [T.t('pause_menu'), () => this.toMenu()],
+    ];
+    voci.forEach(([testo, azione], i) => {
+      window.GameGfx.uiButton(this, W / 2, H / 2 - 26 + i * 52, testo, azione, { w: 250, h: 44, size: 17 });
+    });
 
     // SELETTORE LINGUA anche qui (richiesta dell'utente): chi si accorge a meta' run di voler
     // cambiare lingua non deve abbandonare la partita per farlo. Stesso posto del menu — in alto
@@ -93,6 +106,19 @@ class PauseScene extends Phaser.Scene {
     const g = this.scene.get(this.fromKey);
     this.scene.stop();
     g.scene.restart();
+  }
+
+  // Ricomincia da capo senza passare dal menu. Stessa strada di MenuScene.begin(), che e' la sola
+  // definizione di "far partire una run": incassa, azzera, riparte. Il grado di infezione NON si
+  // tocca — e' una scelta che GameState.reset() conserva apposta.
+  nuovaRun() {
+    const g = this.scene.get(this.fromKey);
+    g.scene.stop();
+    if (window.Meta) window.Meta.bankRun(window.GameState.wax, window.GameState.level);
+    window.GameState.reset();
+    window.Sfx.unlock();
+    this.scene.stop();
+    this.scene.start('GameScene');
   }
 
   toMenu() {
