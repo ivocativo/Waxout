@@ -88,6 +88,7 @@ class GameScene extends Phaser.Scene {
     if (this._mascheraGfx) { this._mascheraGfx.destroy(); this._mascheraGfx = null; }
     this._mascheraCondotto = null;   // la sagoma e' quella del condotto VECCHIO
     this._trapanoFino = 0;
+    this.trapanoPunta = null;        // la punta e' un oggetto del livello vecchio
     this.cleanGoal = 0.8;   // frazione di cerume da pulire per poter completare il livello
 
     // La vita NON si ricarica a ogni livello: si porta dietro tra un livello e l'altro (a
@@ -533,6 +534,15 @@ class GameScene extends Phaser.Scene {
       }
     }
     this.maxEnemies = Phaser.Math.Clamp(this.maxEnemies + (this.mutMaxEnemies || 0), 1, 12);   // MODIFICATORE "orda"
+    // INFEZIONE: un nemico in piu' in campo ogni due gradi. ⚠️ Sta QUI e non in applyInfezione
+    // perche' il tetto dei nemici viene deciso dopo, quando si sa che tipo di livello e': scritto
+    // la' sopra sarebbe stato riscritto e non avrebbe fatto niente.
+    const gradoInf = window.GameState.infezione || 0;
+    const perGradi = window.CONFIG.INFEZIONE.enemyPerGradi || 0;
+    if (gradoInf > 0 && perGradi > 0) {
+      this.maxEnemies = Phaser.Math.Clamp(
+        this.maxEnemies + Math.floor(gradoInf / perGradi), 1, 12);
+    }
     // MANOPOLA DI PROVA "densita'" (src/taratura.js): moltiplica il tetto di nemici contemporanei.
     if (window.Taratura) {
       this.maxEnemies = Phaser.Math.Clamp(Math.round(this.maxEnemies * window.Taratura.v('densita')), 1, 14);
@@ -2698,13 +2708,14 @@ class GameScene extends Phaser.Scene {
     if (!item) return;
     const tg = G.tempoDiGioco;
 
-    // Le GRANATE vanno a munizioni, tutti gli altri a ricarica.
-    if (item.ability === 'granata') {
-      if ((G.granate | 0) <= 0) { window.Sfx.hurt(); return; }
+    // A MUNIZIONI (granate, razzi) oppure a ricarica: lo dice il dato `scorta` del leggendario.
+    if (item.scorta) {
+      if ((G[item.scorta] | 0) <= 0) { window.Sfx.hurt(); return; }
       if (tg < (G.granataPronta || 0)) return;      // solo per non svuotare la scorta in un istante
-      G.granate -= 1;
+      G[item.scorta] -= 1;
       G.granataPronta = tg + window.CONFIG.GRANATA_PAUSA;
-      this.lanciaGranata(adx, ady);
+      if (item.ability === 'granata') this.lanciaGranata(adx, ady);
+      else if (item.ability === 'razzo') this.lanciaRazzo(adx, ady);
       return;
     }
 
@@ -2713,14 +2724,13 @@ class GameScene extends Phaser.Scene {
     if (item.ability === 'bomba') this.esplodiBomba();
     else if (item.ability === 'laser') this.sparaLaser(adx, ady);
     else if (item.ability === 'trapano') this.trapanata();
-    else if (item.ability === 'razzo') this.lanciaRazzo(adx, ady);
   }
 
   // Quanta parte della ricarica e' passata (0 = appena usato, 1 = pronto): serve al pulsante.
   ricaricaLeggendario() {
     const p = window.GameState.player, G = window.GameState;
     const item = (window.LEGGENDARI || {})[p.leggendario];
-    if (!item || item.ability === 'granata') return 1;
+    if (!item || item.scorta) return 1;             // a munizioni: il pulsante mostra un numero
     const manca = (G.bombaPronta || 0) - G.tempoDiGioco;
     return manca <= 0 ? 1 : 1 - (manca / window.CONFIG[GameScene.RICARICHE[item.ability]]);
   }
@@ -2840,24 +2850,116 @@ class GameScene extends Phaser.Scene {
   // ha gia' un potenziamento che fa danno, e sommarli avrebbe reso impossibile capire quale dei
   // due stava facendo cosa. Cosi' invece il gesto e' riconoscibile: si va dritti e si passa
   // DENTRO le cose, macinandole, per quasi mezzo secondo.
+  // PUNTA DEL TRAPANO, in quattro fotogrammi. ⚠️ Le scanalature sono disegnate SPOSTATE di un
+  // quarto in ognuno: alternandoli in fretta sembra che la punta AVVITI. In due dimensioni non si
+  // puo' far ruotare un cono attorno al proprio asse, e senza questo trucco il trapano resta un
+  // triangolo fermo appiccicato davanti — che e' esattamente il "sembra solo uno scatto" segnalato
+  // dall'utente (2026-08-24).
+  makeTrapanoTextures() {
+    if (this.textures.exists('trapano0')) return;
+    const W = 40, H = 24;
+    for (let f = 0; f < 4; f++) {
+      const tela = this.textures.createCanvas('trapano' + f, W, H);
+      const c = tela.getContext();
+      const cono = () => {
+        c.beginPath();
+        c.moveTo(W - 1, H / 2); c.lineTo(9, 2.5); c.lineTo(9, H - 2.5); c.closePath();
+      };
+      // ghiera che la attacca alla mano
+      c.fillStyle = '#7c8590';
+      c.fillRect(0, 5, 10, H - 10);
+      c.fillStyle = '#aab3bd';
+      c.fillRect(0, 7, 10, 3);
+      // corpo della punta
+      c.fillStyle = '#d7dee6';
+      cono(); c.fill();
+      // scanalature: si tagliano sul cono, cosi' non sbordano
+      c.save();
+      cono(); c.clip();
+      c.strokeStyle = '#79838f';
+      c.lineWidth = 3.5;
+      for (let i = -3; i < 7; i++) {
+        const off = i * 10 + f * 2.5;
+        c.beginPath();
+        c.moveTo(9 + off, -2); c.lineTo(9 + off + 11, H + 2);
+        c.stroke();
+      }
+      // luce sul bordo alto: da' volume e dice da che parte "gira"
+      c.strokeStyle = 'rgba(255,255,255,0.75)';
+      c.lineWidth = 2;
+      c.beginPath(); c.moveTo(10, 4); c.lineTo(W - 3, H / 2 - 1); c.stroke();
+      c.restore();
+      tela.refresh();
+    }
+  }
+
   trapanata() {
+    this.makeTrapanoTextures();
     this._trapanoFino = this.time.now + window.CONFIG.TRAPANO_DURATA;
     this._trapanoTic = 0;
     this._trapanoVerso = this.facing;
     this.invulnUntil = Math.max(this.invulnUntil, this._trapanoFino);
     window.Sfx.dash();
+    // La punta compare in mano e resta finche' dura la carica.
+    if (!this.trapanoPunta) {
+      this.trapanoPunta = this.add.image(0, 0, 'trapano0').setDepth(11.5);
+    }
+    this.trapanoPunta.setVisible(true).setAlpha(1).setScale(1);
+    // Sbuffo di partenza: dice che il motore si e' acceso.
+    for (let n = 0; n < 8; n++) {
+      const f = this.add.circle(this.player.x + this.facing * 20, this.player.y + (Math.random() - 0.5) * 20,
+        2 + Math.random() * 3, 0xf0e2c0, 0.7).setDepth(11);
+      this.tweens.add({ targets: f, x: f.x - this.facing * (20 + Math.random() * 40),
+        y: f.y + (Math.random() - 0.5) * 30, alpha: 0, duration: 260 + Math.random() * 200,
+        onComplete: () => f.destroy() });
+    }
   }
 
   // Il trapano mentre gira: si muove da solo e macina quello che attraversa.
   avanzaTrapano(now) {
-    if (!this._trapanoFino || now > this._trapanoFino) return;
+    if (!this._trapanoFino) return;
+    if (now > this._trapanoFino) {                     // finita: si ripone la punta
+      if (this.trapanoPunta && this.trapanoPunta.visible) {
+        const punta = this.trapanoPunta;
+        this.tweens.add({ targets: punta, alpha: 0, scaleX: 0.4, duration: 150,
+          onComplete: () => punta.setVisible(false) });
+      }
+      this._trapanoFino = 0;
+      return;
+    }
     const p = window.GameState.player;
     this.player.setVelocityX(this._trapanoVerso * window.CONFIG.TRAPANO_VEL);
     this.player.setVelocityY(Math.min(this.player.body.velocity.y, 40));   // non si impenna
-    if (Math.random() < 0.6) {                        // scintille davanti alla punta
-      const sc = this.add.circle(this.player.x + this._trapanoVerso * 22,
-        this.player.y + (Math.random() - 0.5) * 26, 2 + Math.random() * 2, 0xffe9a8, 0.9).setDepth(12);
-      this.tweens.add({ targets: sc, alpha: 0, duration: 220, onComplete: () => sc.destroy() });
+    // LA PUNTA CHE AVVITA: quattro fotogrammi alternati in fretta (vedi makeTrapanoTextures).
+    // ⚠️ E' questa la differenza fra "trapano" e "scatto": senza qualcosa che GIRA davanti, un
+    // personaggio che parte dritto e' uno scatto e basta, per quanti effetti gli si mettano dietro.
+    if (this.trapanoPunta) {
+      const verso = this._trapanoVerso;
+      this.trapanoPunta.setTexture('trapano' + (Math.floor(now / 35) % 4))
+        .setPosition(this.player.x + verso * 26, this.player.y - 4)   // all'altezza delle mani
+        .setFlipX(verso < 0)
+        .setRotation(Math.sin(now / 30) * 0.06);      // vibrazione: il trapano non sta fermo
+    }
+    // Scia di fantasmi del personaggio: la stessa dello scatto, cosi' la velocita' si legge.
+    this.spawnDashGhost(true);
+    // TRUCIOLI che schizzano ALL'INDIETRO dalla punta. Vanno indietro apposta: e' cosi' che si
+    // capisce che sta ASPORTANDO materiale e non semplicemente passando.
+    for (let n = 0; n < 2; n++) {
+      const verso = this._trapanoVerso;
+      const t = this.add.circle(this.player.x + verso * 30, this.player.y + (Math.random() - 0.5) * 22,
+        1.5 + Math.random() * 2.5, Math.random() < 0.5 ? 0xe0a83a : 0xfff0c0, 0.95).setDepth(12);
+      this.tweens.add({ targets: t,
+        x: t.x - verso * (40 + Math.random() * 90), y: t.y + (Math.random() - 0.5) * 70,
+        alpha: 0, duration: 240 + Math.random() * 260, ease: 'Quad.out',
+        onComplete: () => t.destroy() });
+    }
+    // Polvere alla punta: un alone che pulsa, per dare corpo al punto di contatto.
+    if (Math.random() < 0.5) {
+      const verso = this._trapanoVerso;
+      const alone = this.add.circle(this.player.x + verso * 34, this.player.y - 4,
+        6 + Math.random() * 6, 0xf5e6c8, 0.35).setDepth(11.4);
+      this.tweens.add({ targets: alone, scale: 1.8, alpha: 0, duration: 220,
+        onComplete: () => alone.destroy() });
     }
     if (now < this._trapanoTic) return;
     this._trapanoTic = now + window.CONFIG.TRAPANO_TIC;
@@ -2921,7 +3023,12 @@ class GameScene extends Phaser.Scene {
       const cxr = Phaser.Math.Clamp(r.x, 0, this.worldW);
       const addosso = this.enemies.getChildren().some((e) => e.active && !e.spawning
         && Math.hypot(e.x - r.x, e.y - r.y) < 26);
-      const finito = now >= r._fino || addosso || r.y >= this.terrainTopAt(cxr)
+      // ⚠️ IL CERUME FERMA IL RAZZO (segnalato dall'utente 2026-08-24: "i missili attraversano il
+      // cerume"). Un cumulo e' roba solida: il razzo ci sbatte e scoppia li', e lo scoppio lo
+      // sfonda comunque nel raggio. Attraversarlo faceva sembrare il razzo un fantasma.
+      const controCerume = this.blocks.getChildren().some((b) => b.active
+        && Phaser.Geom.Rectangle.Contains(b.getBounds(), r.x, r.y));
+      const finito = now >= r._fino || addosso || controCerume || r.y >= this.terrainTopAt(cxr)
         || r.y <= this.ceilingYAt(cxr) || r.x < 0 || r.x > this.worldW;
       if (finito) {
         const dmg = Math.max(1, Math.round(window.GameState.player.damage * window.CONFIG.RAZZO_DANNO));
@@ -4129,11 +4236,17 @@ class GameScene extends Phaser.Scene {
     if (this.locked) return;
     this.locked = true;
     window.Sfx.win();
-    // GRANATE: a fine livello se ne recupera UNA se ne hai usate (regola dell'utente 2026-08-22).
-    // ⚠️ Una, non tutte: se si tornasse sempre a tre, tenersele da parte non avrebbe senso e
-    // conveniva sempre buttarle prima del traguardo. Cosi' invece spenderle costa davvero.
+    // MUNIZIONI: a fine livello se ne recupera UNA per ogni leggendario che ne usa (regola
+    // dell'utente 2026-08-22, estesa ai razzi il 2026-08-24).
+    // ⚠️ Una, non tutte: se la scorta tornasse sempre piena, tenersela da parte non avrebbe senso
+    // e converrebbe svuotarla prima di ogni traguardo. Cosi' invece spenderla costa davvero.
     const G = window.GameState;
-    if (G.granate < window.CONFIG.GRANATE_MAX) G.granate += 1;
+    Object.keys(window.LEGGENDARI || {}).forEach((id) => {
+      const L = window.LEGGENDARI[id];
+      if (!L.scorta) return;
+      const tetto = window.CONFIG[L.scortaMax] || 0;
+      if ((G[L.scorta] | 0) < tetto) G[L.scorta] = (G[L.scorta] | 0) + 1;
+    });
     if (this.spawnTimer) this.spawnTimer.remove();
     if (this.quakeTimer) { this.quakeTimer.remove(false); this.quakeTimer = null; }
     this.player.setVelocity(0, 0);
@@ -5042,7 +5155,9 @@ class GameScene extends Phaser.Scene {
     // Il pulsante del LEGGENDARIO mostra quanto manca alla ricarica (o quante granate restano):
     // si aggiorna da qui perche' e' qui che vive il cronometro del tempo giocato.
     if (this.touch && this.touch.aggiornaBomba) {
-      this.touch.aggiornaBomba(this.ricaricaLeggendario(), window.GameState.granate);
+      const legOra = (window.LEGGENDARI || {})[window.GameState.player.leggendario];
+      const scorta = legOra && legOra.scorta ? window.GameState[legOra.scorta] : 0;
+      this.touch.aggiornaBomba(this.ricaricaLeggendario(), scorta);
     }
     window.GameGfx.updateBackground(this);   // parallax: scorre gli strati di sfondo
     this.animateWax(time);                    // cerume "fluido": ondeggia e cola
@@ -5149,8 +5264,9 @@ GameScene.MIRA_SU_OLTRE = 55 * Math.PI / 180;
 // Quale ricarica usa ogni leggendario. ⚠️ In un posto solo: la stessa mappa serviva sia a
 // premere il tasto sia a disegnare la lancetta del pulsante, e due copie prima o poi divergono
 // (il tasto direbbe "pronto" e la lancetta no).
+// (i leggendari a munizioni — granate, razzi — non compaiono qui: non hanno ricarica)
 GameScene.RICARICHE = { bomba: 'BOMBA_RICARICA', laser: 'LASER_RICARICA',
-  trapano: 'TRAPANO_RICARICA', razzo: 'RAZZO_RICARICA' };
+  trapano: 'TRAPANO_RICARICA' };
 GameScene.RIMBALZO_TOLLERANZA = 12;
 // I fogli del personaggio, per misurarne l'altezza disegnata all'avvio (misuraAltezzeDisegnate).
 GameScene.FOGLI_PG = ['hero_idle', 'hero_walk', 'hero_run', 'hero_jump', 'hero_crouch',

@@ -309,9 +309,9 @@ window.TouchControls = (function () {
       const dy = haScatto ? (ar * 2 + 16) * 2 : (ar * 2 + 16);
       const rb = ar * 0.82, bx2 = jx, by2 = jy - dy;
       const bBomba = button(scene, bx2, by2, rb, leg.icona || 'bomba');
-      // Le GRANATE non hanno una ricarica: hanno delle munizioni. Il numero le racconta meglio
-      // di qualunque lancetta — e "quante me ne restano" e' l'unica domanda che ci si fa.
-      const munizioni = leg.ability === 'granata'
+      // Granate e razzi non hanno una ricarica: hanno delle MUNIZIONI. Il numero le racconta
+      // meglio di qualunque lancetta — "quante me ne restano" e' l'unica domanda che ci si fa.
+      const munizioni = leg.scorta
         ? scene.add.text(bx2 + rb * 0.72, by2 + rb * 0.72, '', {
             fontFamily: 'monospace', fontSize: '15px', color: '#fff7e8',
             stroke: '#14161f', strokeThickness: 4,

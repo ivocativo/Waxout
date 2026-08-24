@@ -49,12 +49,18 @@ def _leggendario(nome):
         }
         s.facing = 1;
         s.usaLeggendario(1, 0);
-        await new Promise(r => setTimeout(r, 120));
+        // ⚠️ SI FA AVANZARE L'OROLOGIO A MANO, invece di aspettare. Qui il gioco gira a pochi
+        // fotogrammi al secondo: aspettando 120ms veri poteva non girarne NEMMENO UNO, e i poteri
+        // che si disegnano dentro l'update (il trapano) risultavano invisibili — non perche'
+        // fossero rotti, ma perche' non erano ancora stati disegnati una prima volta.
+        let t = g.loop.time;
+        for (let i = 0; i < 9; i++) { t += 16.6; g.loop.step(t); }
+        await new Promise(r => setTimeout(r, 60));
         // ⚠️ SI CONGELA LA SCENA PRIMA DI SCATTARE. Qui il gioco gira a una manciata di
         // fotogrammi al secondo (browser invisibile, disegno via software), e un effetto che dura
         // 420ms puo' essere gia' finito quando arriva lo scatto: si fotograferebbe il nulla e si
         // penserebbe che il potere non si vede. In pausa il disegno continua ma le animazioni no.
-        g.scene.pause('GameScene');
+        if (!window.__fotoGif) g.scene.pause('GameScene');
     """ % (nome, nome, nome)
 
 
@@ -79,6 +85,15 @@ SCENE = {
     "trapano": _leggendario("trapano"),
     "razzo": _leggendario("razzo"),
     "granata": _leggendario("granata"),
+    # Il negozio dei leggendari come lo vede chi ha vinto UNA volta al grado 0: e' la situazione
+    # normale, e serve a controllare cosa si vede davvero invece di cosa si vede con tutto aperto.
+    "leggendari_normale": """
+        const g = window.game;
+        window.Meta.forzaInfezione(0);
+        window.Meta.addBank(9000);
+        g.scene.start('ShopScene', { pagina: 2 });
+        await new Promise(r => setTimeout(r, 800));
+    """,
     # Il negozio, pagina dei leggendari, con tutto sbloccato.
     "leggendari": """
         const g = window.game;
@@ -136,6 +151,10 @@ def main():
             "&& window.game.scene.getScenes(true).some(s => s.scene.key === 'MenuScene')",
             timeout=90_000,
         )
+        # In modalita' GIF la scena NON va messa in pausa: la si vuole vedere MUOVERSI. La pausa
+        # serve solo allo scatto singolo, per non perdere gli effetti brevi.
+        if gif:
+            pagina.evaluate("() => { window.__fotoGif = true }")
         pagina.evaluate("async () => {" + SCENE[nome] + "}")
         if gif:
             # ⚠️ Si fotografa MENTRE IL GIOCO GIRA DA SOLO: niente passi sintetici. Farlo avanzare

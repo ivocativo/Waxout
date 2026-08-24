@@ -102,6 +102,7 @@ window.CONFIG = {
   // GRANATE: le uniche a MUNIZIONI invece che a tempo (scelta dell'utente): tre per run, e a
   // fine livello se ne recupera una. Cosi' si pensa a QUANDO usarle, non ad aspettare.
   GRANATE_MAX: 3,
+  RAZZI_MAX: 2,              // i razzi vanno a munizioni come le granate (scelta dell'utente)
   GRANATA_DANNO: 3.2,        // moltiplicatore sul danno corpo a corpo, nel raggio
   GRANATA_RAGGIO: 150,
   GRANATA_MICCIA: 900,       // ms prima dello scoppio (rotola: si puo' anticiparne l'arrivo)
@@ -125,15 +126,18 @@ window.CONFIG = {
   TRAPANO_DURATA: 420,       // ms di carica
 
   // RAZZO: parte dove miri e CURVA verso il bersaglio piu' vicino dentro un cono davanti a se'.
+  // ⚠️ A MUNIZIONI come le granate (scelta dell'utente 2026-08-24): due per run, una torna a fine
+  // livello. Con la ricarica a tempo era il quinto potere "aspetta e ripremi"; a munizioni diventa
+  // una decisione — e due sole obbligano a sceglierne il bersaglio.
   // ⚠️ Il cono e' stretto apposta: un razzo che insegue chiunque toglierebbe la mira di mano al
   // giocatore, e un leggendario che gioca da solo non e' un giocattolo.
-  RAZZO_RICARICA: 7000,
   RAZZO_DANNO: 3.5,          // moltiplicatore, nel raggio dello scoppio
   RAZZO_RAGGIO: 120,
   RAZZO_VEL: 430,
   RAZZO_CONO: 0.55,          // radianti di semiapertura del cono di ricerca (~31 gradi)
   RAZZO_CURVA: 3.2,          // radianti al secondo di correzione: curva, non fa inversioni
-  RAZZO_VITA: 2600,          // ms prima di spegnersi da solo        // ms che l'onda impiega ad attraversare lo schermo
+  RAZZO_VITA: 2600,          // ms prima di spegnersi da solo
+
   RADIALE_OGNI: 2600,     // ms fra una raffica e l'altra
   RADIALE_DANNO: 0.55,    // quanto vale una pallina radiale rispetto a una del getto
   RADIALE_PER_PESCA: 4,   // quante direzioni aggiunge ogni carta pescata
@@ -187,10 +191,22 @@ window.CONFIG = {
   // Fattori per GRADO di infezione (moltiplicati: al grado N valgono ^N... no: 1 + fattore*N).
   // Tenuti bassi apposta: 5 gradi devono essere DAVVERO difficili ma senza muri improvvisi.
   INFEZIONE: {
-    enemyHp:   0.15,   // +15% vita nemici per grado
+    // ⚠️ RIALZATI IL 2026-08-24 (vita 0,15 -> 0,30 e danno 0,10 -> 0,15) perche' l'utente ha
+    // giocato al grado 5 e NON SENTIVA NESSUNA DIFFERENZA. Misurato: il grado 5 dava +75% vita,
+    // e il cerumino di livello 1 passava da 27 a 48 punti — ma il getto ne toglie 24, e 24x2 fa
+    // esattamente 48. IL DANNO CONTA SOLO A COLPI INTERI: tutto quel +75% spariva dentro lo
+    // stesso identico numero di colpi. E' la stessa lezione delle armi (vedi HANDOFF).
+    // ⚠️ E c'e' un secondo motivo, ancora piu' scomodo: i MODIFICATORI del livello ballano molto
+    // di piu' (vetro x0,45, corazza x1,7). Con passi piccoli il grado di infezione era rumore di
+    // fondo dentro una variazione tre volte piu' grande.
+    enemyHp:   0.30,   // +30% vita nemici per grado (grado 5 = x2,5)
     enemySpeed: 0.07,  // +7% velocita' per grado
-    enemyDmg:  0.10,   // +10% danno per grado
+    enemyDmg:  0.15,   // +15% danno per grado (grado 5 = x1,75)
     waxReward: 0.20,   // +20% cerume per grado (l'incentivo a salire)
+    // NEMICI IN PIU' IN CAMPO: uno ogni QUESTI gradi. ⚠️ E' l'unica leva immune agli
+    // arrotondamenti: quanti nemici ti trovi addosso si vede a colpo d'occhio, mentre "questo
+    // cerumino ha il 30% di vita in piu'" si puo' solo dedurre contando i colpi.
+    enemyPerGradi: 2,
   },
 
   // Palette a tema "orecchio / cerume / sporco"
@@ -285,12 +301,19 @@ window.BLUEPRINTS = {
 // in campo uno alla volta: e' quello che li tiene diversi fra loro invece di farli diventare una
 // collezione di tasti da premere tutti insieme. La scelta si fa nell'Arsenale.
 // `infezione` = grado da SUPERARE per vederlo; `icona` = come lo disegna il pulsante (src/touch.js).
+// `scorta` = nome del contatore in GameState per i leggendari a MUNIZIONI (invece che a ricarica):
+// se ne parte con `scortaMax` e a fine livello se ne recupera UNA. ⚠️ Scritto come DATO e non come
+// una serie di "if" sparsi: azzeramento a inizio run, ricarica a fine livello, numero sul pulsante
+// e controlli automatici leggono tutti da qui, e cosi' un leggendario nuovo non puo' dimenticarne
+// un pezzo per strada.
 window.LEGGENDARI = {
   bomba:   { cost: 1980, ability: 'bomba',   infezione: 0, icona: 'bomba' },
-  granata: { cost: 2420, ability: 'granata', infezione: 1, icona: 'granata' },
+  granata: { cost: 2420, ability: 'granata', infezione: 1, icona: 'granata',
+             scorta: 'granate', scortaMax: 'GRANATE_MAX' },
   laser:   { cost: 2860, ability: 'laser',   infezione: 2, icona: 'laser' },
   trapano: { cost: 3300, ability: 'trapano', infezione: 3, icona: 'trapano' },
-  razzo:   { cost: 3740, ability: 'razzo',   infezione: 4, icona: 'razzo' },
+  razzo:   { cost: 3740, ability: 'razzo',   infezione: 4, icona: 'razzo',
+             scorta: 'razzi', scortaMax: 'RAZZI_MAX' },
 };
 
 // ARSENALE (2026-07-27, richiesta dell'utente). Ogni "arma" e' in realta' un KIT COMPLETO:
@@ -515,11 +538,20 @@ window.GameState = {
   reset() {
     this.level = 1;
     this.wax = 0;
-    // Granate: scorta della run. Sta qui e non nel giocatore perche' deve sopravvivere al
-    // passaggio da un livello all'altro (il giocatore viene ricreato, la run no).
-    this.granate = window.CONFIG.GRANATE_MAX;
-    this.bombaPronta = 0;
+    // Scorte dei leggendari a munizioni. Stanno qui e non nel giocatore perche' devono
+    // sopravvivere al passaggio da un livello all'altro (il giocatore viene ricreato, la run no).
+    Object.keys(window.LEGGENDARI || {}).forEach((id) => {
+      const L = window.LEGGENDARI[id];
+      if (L.scorta) this[L.scorta] = window.CONFIG[L.scortaMax] || 0;
+    });
+    // ⚠️ TUTTI I CRONOMETRI, NON SOLO QUELLO DELLA BOMBA. Le ricariche si misurano su
+    // `tempoDiGioco`, che qui torna a zero: un cronometro rimasto indietro dalla run precedente
+    // resta percio' NEL FUTURO, e il potere risulta "in ricarica" per tutta la run nuova.
+    // E' successo davvero con le granate: alla seconda run non partivano piu' (segnalato
+    // dall'utente il 2026-08-24, quando `granataPronta` era l'unico che nessuno azzerava).
     this.tempoDiGioco = 0;
+    this.bombaPronta = 0;
+    this.granataPronta = 0;
     this.ownedAbilities = [];
     this.prossimoLivello = null;
     this.runStartAt = Date.now();

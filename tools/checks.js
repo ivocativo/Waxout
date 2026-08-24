@@ -1662,13 +1662,17 @@ window.__earwaxChecks = function (opts) {
       if (T.t('leg_' + id + '_name') === 'leg_' + id + '_name') mancanti.push(id + ': nome');
       if (T.t('leg_' + id + '_desc') === 'leg_' + id + '_desc') mancanti.push(id + ': descrizione');
       if (!item.icona) mancanti.push(id + ': icona');
-      if (item.ability !== 'granata' && !window.CONFIG[GameScene.RICARICHE[item.ability]]) {
-        mancanti.push(id + ': ricarica');
+      // Ogni leggendario deve avere UN modo di limitarsi: o una ricarica a tempo, o una scorta di
+      // munizioni. Nessuno dei due vorrebbe dire un potere che si puo' premere all'infinito.
+      if (item.scorta) {
+        if (!window.CONFIG[item.scortaMax]) mancanti.push(id + ': quante munizioni');
+      } else if (!window.CONFIG[GameScene.RICARICHE[item.ability]]) {
+        mancanti.push(id + ': ne ricarica ne munizioni');
       }
     });
     const n = Object.keys(window.LEGGENDARI).length;
-    if (!mancanti.length) ok('ogni leggendario ha nome, icona e ricarica', '-', n + ' leggendari completi');
-    else ko('ogni leggendario ha nome, icona e ricarica', '-', mancanti.join(' | '));
+    if (!mancanti.length) ok('ogni leggendario ha nome, icona e un limite', '-', n + ' leggendari completi');
+    else ko('ogni leggendario ha nome, icona e un limite', '-', mancanti.join(' | '));
   }
 
   // [46] IL TASTO FA PARTIRE TUTTI I LEGGENDARI, E LI METTE IN RICARICA.
@@ -1682,15 +1686,16 @@ window.__earwaxChecks = function (opts) {
       const gsL = avviaLivello(3);
       equipaggia(gsL, id);
       gsL.touch.bombaQueued = true;
-      const granatePrima = window.GameState.granate;
+      const item0 = window.LEGGENDARI[id];
+      const scortaPrima = item0.scorta ? window.GameState[item0.scorta] : 0;
       avanza(gsL, 3);
       const item = window.LEGGENDARI[id];
-      if (item.ability === 'granata') {
-        if (window.GameState.granate !== granatePrima - 1) guasti.push(id + ': non ha consumato la granata');
-        if (!(gsL.granateVive || []).length) guasti.push(id + ': nessuna granata in volo');
+      if (item.scorta) {
+        if (window.GameState[item.scorta] !== scortaPrima - 1) guasti.push(id + ': non ha consumato la munizione');
       } else if (!(window.GameState.bombaPronta > 0)) {
         guasti.push(id + ': non e andato in ricarica');
       }
+      if (id === 'granata' && !(gsL.granateVive || []).length) guasti.push('granata: nessuna granata in volo');
       if (id === 'razzo' && !(gsL.razziVivi || []).length) guasti.push('razzo: nessun razzo in volo');
       if (id === 'trapano' && !gsL._trapanoFino) guasti.push('trapano: non e partito');
     });
@@ -1703,23 +1708,55 @@ window.__earwaxChecks = function (opts) {
   // ⚠️ La parte che conta e' "una sola": se tornassero tutte, tenersele da parte non avrebbe piu'
   // senso e converrebbe sempre svuotare la scorta prima del traguardo.
   {
-    const gsG = avviaLivello(3);
-    equipaggia(gsG, 'granata');
-    const partenza = window.GameState.granate;
-    for (let n = 0; n < 2; n++) {
+    const guasti = [], detto = [];
+    Object.keys(window.LEGGENDARI).filter((id) => window.LEGGENDARI[id].scorta).forEach((id) => {
+      const L = window.LEGGENDARI[id];
+      const gsG = avviaLivello(3);
+      equipaggia(gsG, id);
+      const tetto = window.CONFIG[L.scortaMax];
+      const partenza = window.GameState[L.scorta];
       window.GameState.granataPronta = 0;
       gsG.usaLeggendario(1, 0);
-    }
-    const dopoDueLanci = window.GameState.granate;
-    gsG.levelComplete();
-    const dopoLivello = window.GameState.granate;
-    if (partenza === window.CONFIG.GRANATE_MAX && dopoDueLanci === partenza - 2
-        && dopoLivello === dopoDueLanci + 1) {
-      ok('granate: tre per run, una torna a fine livello', 3,
-        partenza + ' -> ' + dopoDueLanci + ' dopo due lanci -> ' + dopoLivello + ' a fine livello');
+      const dopoUnLancio = window.GameState[L.scorta];
+      gsG.levelComplete();
+      const dopoLivello = window.GameState[L.scorta];
+      if (partenza !== tetto) guasti.push(id + ': parte con ' + partenza + ' invece di ' + tetto);
+      if (dopoUnLancio !== partenza - 1) guasti.push(id + ': il lancio non consuma');
+      if (dopoLivello !== dopoUnLancio + 1) guasti.push(id + ': a fine livello non ne torna una');
+      detto.push(id + ' ' + partenza + '->' + dopoUnLancio + '->' + dopoLivello);
+    });
+    if (!guasti.length) ok('munizioni: scorta piena a inizio run, una torna a fine livello', 3, detto.join(' | '));
+    else ko('munizioni: scorta piena a inizio run, una torna a fine livello', 3, guasti.join(' | '));
+  }
+
+  // [54] I CRONOMETRI DEI LEGGENDARI RIPARTONO DA ZERO A OGNI RUN.
+  // ⚠️ Nato da un difetto reale (segnalato dall'utente il 2026-08-24): "le granate se inizio una
+  // seconda run non funzionano". Le ricariche si misurano su `tempoDiGioco`, che a inizio run torna
+  // a zero: un cronometro rimasto indietro dalla run precedente si ritrova percio' NEL FUTURO, e il
+  // potere resta "in ricarica" per tutta la run nuova. Non e' un caso di confine: capita a
+  // CHIUNQUE giochi due run di fila.
+  {
+    const gsC = avviaLivello(3);
+    equipaggia(gsC, 'granata');
+    for (let n = 0; n < 20; n++) { window.GameState.granataPronta = 0; gsC.usaLeggendario(1, 0); avanza(gsC, 6); }
+    const orologioPrima = Math.round(window.GameState.tempoDiGioco);
+    const attesaPrima = Math.round(window.GameState.granataPronta || 0);
+    window.GameState.reset();                       // come premere "NUOVA RUN"
+    const rimasti = ['bombaPronta', 'granataPronta'].filter((k) => (window.GameState[k] || 0) > 0);
+    const gsD = avviaLivello(1);
+    equipaggia(gsD, 'granata');
+    window.GameState.granate = window.CONFIG.GRANATE_MAX;
+    const prima = window.GameState.granate;
+    gsD.usaLeggendario(1, 0);
+    const parte = window.GameState.granate === prima - 1 && (gsD.granateVive || []).length > 0;
+    if (!rimasti.length && parte) {
+      ok('i poteri ripartono davvero alla seconda run', 1,
+        'dopo la prima run l orologio era a ' + orologioPrima + 'ms con attesa fino a '
+        + attesaPrima + 'ms: azzerati entrambi, e la granata riparte');
     } else {
-      ko('granate: tre per run, una torna a fine livello', 3,
-        'partenza=' + partenza + ' dopo due lanci=' + dopoDueLanci + ' fine livello=' + dopoLivello);
+      ko('i poteri ripartono davvero alla seconda run', 1,
+        'cronometri rimasti avanti: ' + (rimasti.join(', ') || 'nessuno')
+        + ' | la granata riparte=' + parte);
     }
   }
 
@@ -1890,6 +1927,52 @@ window.__earwaxChecks = function (opts) {
       ko('il livello nuovo non eredita poteri e nebbia del vecchio', 4,
         'prima razzi=' + razziPrima + ' nebbia=' + nebbiaPrima
         + ' | dopo razzi=' + razziDopo + ' nebbia=' + nebbiaDopo);
+    }
+  }
+
+  // [53] L'INFEZIONE SI DEVE SENTIRE, NON SOLO ESSERCI.
+  // ⚠️ Nato da una segnalazione dell'utente: "ho giocato al grado 5 e bastano sempre 2 colpi".
+  // Il meccanismo FUNZIONAVA — la vita saliva del 75% — e non si sentiva lo stesso, perche' IL
+  // DANNO CONTA SOLO A COLPI INTERI: il cerumino passava da 27 a 48 punti, e il getto che ne toglie
+  // 24 lo abbatteva in due colpi in tutti e due i casi. Per questo il controllo NON guarda la vita
+  // ma i COLPI, che sono cio' che il giocatore percepisce davvero, piu' i nemici in campo.
+  // ⚠️ Livello a mutatore SPENTO (prossimoLivello con mutator: null): i mutatori ballano da x0,45
+  // a x2,3, molto piu' del passo di un grado, e senza spegnerli il confronto sarebbe rumore.
+  {
+    // ⚠️ NON si puo' usare avviaLivello: quello chiama GameState.reset(), che CANCELLA
+    // `prossimoLivello` — cioe' proprio la richiesta di "stesso tipo di livello, nessun
+    // modificatore". Cosi' i due campioni finivano su livelli diversi e il confronto misurava il
+    // caso invece dell'infezione (il numero di nemici usciva addirittura piu' basso al grado 5).
+    const misura = (grado) => {
+      ['UpgradeScene', 'PauseScene', 'ShopScene', 'MenuScene'].forEach((k) => { try { g.scene.stop(k); } catch (e) {} });
+      window.GameState.reset();
+      window.GameState.level = 6;
+      window.GameState.infezione = grado;
+      window.GameState.prossimoLivello = { kind: 'rush', mutator: null, waxMult: 1 };
+      g.scene.start('GameScene');
+      const gs = g.scene.getScene('GameScene');
+      avanza(gs, 16);
+      const e = gs.spawnEnemy('blob', { x: gs.player.x + 300 });
+      const p = window.GameState.player;
+      const dato = { vita: e ? e.hp : 0, getto: p.jetDamage, nemici: gs.maxEnemies };
+      dato.colpi = e ? Math.ceil(e.hp / p.jetDamage) : 0;
+      if (e) e.destroy();
+      return dato;
+    };
+    const base = misura(0);
+    const alto = misura(window.CONFIG.INFEZIONE_MAX);
+    window.GameState.infezione = 0;                 // non lasciarlo acceso per i controlli dopo
+    const piuColpi = alto.colpi > base.colpi;
+    const piuNemici = alto.nemici > base.nemici;
+    if (piuColpi && piuNemici) {
+      ok('al grado massimo di infezione i nemici si sentono', 6,
+        'cerumino: ' + base.vita + ' vita in ' + base.colpi + ' colpi al grado 0, '
+        + alto.vita + ' in ' + alto.colpi + ' colpi al grado ' + window.CONFIG.INFEZIONE_MAX
+        + '; nemici in campo ' + base.nemici + ' -> ' + alto.nemici);
+    } else {
+      ko('al grado massimo di infezione i nemici si sentono', 6,
+        'colpi ' + base.colpi + ' -> ' + alto.colpi + ' (devono aumentare), nemici in campo '
+        + base.nemici + ' -> ' + alto.nemici + ' (devono aumentare)');
     }
   }
 

@@ -211,7 +211,7 @@ Lavoro nuovo di questa sessione (logica ok, feel/aspetto da provare):
 ```
 python tools\controlla.py
 ```
-93 controlli in ~13m. Apre il gioco in un browser invisibile (Playwright), inietta
+95 controlli in ~13m. Apre il gioco in un browser invisibile (Playwright), inietta
 `tools/checks.js` ed esce con codice 1 se qualcosa e' rotto. **Ogni controllo nasce da un bug
 realmente successo** (e' annotato nel file quale): cerume sospeso sul terreno, salto morto nelle
 cunette, nemici sotto il pavimento o incastrati nelle membrane, pedane irraggiungibili o sepolte,
@@ -473,8 +473,17 @@ appena spawnato) → filtrare per `x.kind`/`x.swarmling`/`x.fugitive` o distrugg
   ⚠️ I boss: la bomba non li tocca affatto, gli altri quattro li colpiscono scontati
   (`CONFIG.DANNO_BOSS_LEGG`). Uno scontro che si vince premendo un tasto toglie il momento in cui
   il gioco chiede di piu'; un tasto inerte proprio nello scontro sarebbe l'errore opposto.
-  Le granate sono le uniche a MUNIZIONI (3 per run, una torna a fine livello) e il loro pulsante
-  mostra un numero invece della lancetta.
+  Granate (3 per run) e razzi (2 per run) vanno a MUNIZIONI invece che a ricarica: se ne recupera
+  UNA a fine livello e il pulsante mostra un numero invece della lancetta. Chi ne usa e' scritto
+  come DATO (`scorta` in window.LEGGENDARI), non come una serie di "if" sparsi: azzeramento a
+  inizio run, ricarica a fine livello, numero sul pulsante e controlli automatici leggono tutti da
+  li'.
+  ⚠️ **UN CRONOMETRO CHE NON SI AZZERA RESTA NEL FUTURO.** Le ricariche si misurano su
+  `GameState.tempoDiGioco`, che a inizio run torna a zero: un cronometro rimasto indietro dalla run
+  precedente si ritrova percio' avanti, e il potere risulta "in ricarica" per tutta la run nuova.
+  E' successo davvero — "le granate se inizio una seconda run non funzionano" (2026-08-24), con
+  `granataPronta` unico dimenticato mentre `bombaPronta` veniva azzerato. Ora si azzerano insieme
+  in `GameState.reset()`, e un controllo automatico gioca due run di fila per accorgersene.
 - **Assedio con la nebbia (dal 2026-08-23):** un gas di cerume avanza da sinistra e obbliga a
   muoversi. NON tocca i nemici (li sputa fuori), fa danno nel tempo senza contraccolpo, ed e'
   RITAGLIATA sulla sagoma del condotto: un gas in un tubo non attraversa le pareti. Dettagli e
@@ -842,6 +851,24 @@ PG e nemici ci camminano via **heightmap-snap** (in `agganciaAlTerreno`: `body.y
   due-tre volte da una sola assunzione non dichiarata ("il giocatore uccide OGNI nemico che
   compare"). Quando serve un numero di economia, meglio cercare un ancoraggio DENTRO il gioco
   (es. il tempo che il modo CORSA considera sufficiente per un livello) che costruirlo su ipotesi.
+
+### L'INFEZIONE C'ERA E NON SI SENTIVA (2026-08-24)
+L'utente ha giocato al grado 5 e ha detto: "bastano sempre solo 2 colpi per abbattere i cerumini,
+controlla che cambi effettivamente la vita". Il meccanismo **funzionava**: +75% vita, +50% danno.
+Non si sentiva lo stesso, per tre motivi che vale la pena ricordare tutti e tre:
+ 1. **il danno conta solo a colpi interi.** Il cerumino di livello 1 passava da 27 a 48 punti vita,
+    ma il getto ne toglie 24: 24x2 = 48. Tutto quel +75% spariva dentro lo stesso identico numero
+    di colpi. **Misurare la vita non basta mai: bisogna misurare i COLPI.**
+ 2. **i modificatori del livello ballano molto di piu'** (vetro x0,45, corazza x1,7, ironwax x2,3).
+    Un passo del 15% per grado era rumore di fondo dentro una variazione tre volte piu' grande —
+    e un livello "vetro" al grado 5 aveva nemici piu' fragili di uno senza modificatore al grado 0.
+ 3. restano attive a ogni grado le tre manopole che ammorbidiscono il gioco (`VITA_NEMICI` 0,8,
+    `DANNO_NEMICI` 0,7, `DANNO_PG` 1,5).
+**Rimedio:** passo per grado alzato (vita 0,15 -> 0,30, danno 0,10 -> 0,15) **e un nemico in piu'
+in campo ogni due gradi**. La seconda leva e' quella che conta di piu': il numero di nemici che ti
+si para davanti e' l'unica cosa **immune agli arrotondamenti**, si vede a colpo d'occhio senza
+contare niente. Quando un aumento "non si sente", chiedersi sempre se sta cadendo dentro un
+arrotondamento — e in quel caso cercare una leva che non si possa arrotondare.
 
 ## RISCHI / punti aperti da tenere d'occhio
 - ⚠️ **ELENCHI SCRITTI A MANO CHE DOVREBBERO RICAVARSI DAI DATI.** Il negozio aveva
