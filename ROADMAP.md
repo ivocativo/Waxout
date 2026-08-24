@@ -4,22 +4,29 @@ Richiesta dell'utente: dare un motivo per continuare a giocare alle difficolta' 
 filoni, piu' una misura che li lega.
 
 ## LA MISURA CHE ORIENTA TUTTO
-Colpi di GETTO per uccidere ogni nemico, per grado di infezione (livello 5, danno getto 24):
+Colpi di GETTO per uccidere ogni nemico, per grado di infezione — livello 5, getto MAI potenziato
+(danno 24), mutatori spenti. **Rimisurata il 2026-08-24** dopo l'ammorbidimento della crosta e il
+rialzo dei gradi di infezione; si rigenera con `python tools	abella_colpi.py`.
 
 | nemico | inf.0 | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|---|
-| pulce | 1 | 1 | 2 | 2 | 2 | 2 |
-| cerumino | 2 | 2 | 3 | 3 | 3 | 3 |
-| moscerino | 2 | 2 | 2 | 2 | 3 | 3 |
-| gorgogliante | 3 | 3 | 4 | 4 | 4 | 5 |
-| saltatore | 3 | 4 | 4 | 5 | 5 | 5 |
-| crosta | 10 | 11 | 13 | 14 | 15 | 17 |
+| pulce | 1 | 2 | 2 | 2 | 2 | 2 |
+| cerumino | 2 | 3 | 3 | 4 | 4 | 5 |
+| moscerino | 2 | 2 | 3 | 3 | 3 | 4 |
+| gorgogliante | 3 | 4 | 4 | 5 | 6 | 6 |
+| saltatore | 3 | 4 | 5 | 6 | 7 | 8 |
+| crosta | 4 | 6 | 7 | 8 | 9 | 10 |
+| _nemici in campo_ | 3 | 3 | 4 | 4 | 5 | 5 |
 
-⚠️ **Il danno del getto e' 24 a OGNI grado**: non cresce mai con l'infezione, mentre la vita dei
-nemici sale del 15% per grado. L'unico modo di alzarlo e' la carta `dmg` del negozio, che sul
-getto vale META' che sulla mazza (`jetDamage: 16 + lv('dmg') * per * 0.5`). Da qui l'idea
-dell'utente di un potenziamento del negozio dedicato ai colpi a distanza: e' fondata, e la crosta
-a 17 palline al grado 5 e' il caso limite che la giustifica.
+⚠️ **MISURARE I COLPI, NON LA VITA.** Con i primi fattori (+15% vita per grado) questa tabella era
+quasi PIATTA — il cerumino faceva 2 colpi al grado 0 e 3 al grado 5 — ed e' esattamente cio' che
+l'utente ha segnalato giocando ("a infezione 5 bastano sempre 2 colpi"). La vita saliva davvero,
+ma spariva dentro gli arrotondamenti. Da qui i fattori attuali (+30% vita, +15% danno per grado) e
+la riga **nemici in campo**, che e' l'unica leva che nessun arrotondamento puo' mangiare.
+
+⚠️ **Il danno del getto resta 24 a OGNI grado**: non cresce mai con l'infezione. Si alza solo con
+la carta `dmg` del negozio (che sul getto vale META' che sulla mazza) e con l'**Ugello Potenziato**,
+lo sblocco dedicato ai colpi a distanza nato proprio da questa tabella.
 
 ## H.7 — ASSEDIO: COSTRINGERE A MUOVERSI ✅ FATTO (2026-08-23)
 Segnalato dai tester: nell'ASSEDIO conviene piantarsi in un punto e aspettare che i nemici

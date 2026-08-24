@@ -124,9 +124,10 @@ Roguelite giocabile su PC e su telefono/tablet, **anche come app Android**. _Agg
 > Lo stato di dettaglio, cosa è già collaudato e cosa no, e il piano dei prossimi passi sono nei
 > file di sviluppo **`HANDOFF.md`** e **`ROADMAP.md`** (per non ripetere le stesse cose in due posti).
 
-**Prossimi grandi traguardi:** rifinire l'estetica (animazioni dei nemici, timpano incastonato nella
-carne), **rifare musica ed effetti sonori**, poi la pubblicazione su **Google Play Store** (telefoni
-e tablet Android) — l'impacchettamento con **Capacitor** è già funzionante.
+**Waxout è pubblicato su Google Play** (telefoni e tablet Android, impacchettato con **Capacitor**).
+Da qui in poi il gioco cresce coi playtest: ogni giro di segnalazioni dei tester diventa una
+versione nuova. **Prossimi traguardi:** altri set di sfondo, l'arena dedicata dell'assedio, gli
+easter egg.
 
 > Nota tecnica: il salvataggio (`localStorage`) funziona quando il gioco è servito via HTTP o
 > nell'app Android; aprendo `index.html` da `file://` alcuni browser non lo permettono.

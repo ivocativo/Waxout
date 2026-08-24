@@ -6,7 +6,7 @@
 > chiunque lo trovi sta in **`README.md`**. Regola d'oro: ogni informazione ha UNA casa sola,
 > niente sezioni duplicate tra i tre file.
 
-_Ultimo aggiornamento: 2026-08-02 · Ultimo commit pushato: `49a8349`._
+_Ultimo aggiornamento: 2026-08-24 · Ultimo commit pushato: `08c45c7`._
 _**Fatti e pushati:** Round 1 e 2 (correzioni playtest, fino a `75df562`); Round 3 AUDIO (synth +_
 _3 atmosfere, boss punk); **APP ANDROID via GitHub Actions**; **Round 4 — CONDOTTO/TERRENO:**_
 _soffitto ondulato + **TERRENO stile Terraria** (colline e cunette) percorso via "mappa di altezze";_
@@ -103,9 +103,20 @@ _**✅ REVISIONE DEL CODICE AVVIATA (2026-08-02):** mappato `GameScene.js` e sco
 _non stava nelle aree ma in DUE funzioni sole (`create()` 465 righe e `update()` 460, il 22% del_
 _file). **`update()` e' gia' stata spezzata: da 460 righe a 27**, nove blocchi con un nome, senza_
 _riscrivere una riga di logica. Piano e verifiche in `ROADMAP.md` §Mappatura._
-_**STATO ORA:** in Estetica resta solo un altro SET DI SFONDO. Restano gli **EASTER EGG** da_
-_scegliere, l'ARENA dedicata dell'assedio, e i passi 2-5 della revisione del codice._
-_Poi si va allo STORE._
+_**✅ SI E' ANDATI ALLO STORE (agosto 2026).** Il gioco e' **PUBBLICATO su Google Play**: l'utente_
+_cura di persona chiave di firma, pacchetto AAB e caricamenti (vedi `docs/PUBBLICARE.md`). Da li'_
+_in poi il lavoro e' guidato dai TESTER: ogni giro di segnalazioni diventa un commit e un APK._
+_**✅ LEGGENDARI (2026-08-19/24):** cinque poteri comprabili in negozio, chiusi dietro i gradi di_
+_infezione — bomba (0), granate (1), razzo (2), trapano (3), laser (4, il piu' potente e quindi_
+_l'ultimo). **Uno solo equipaggiato per run.** Granate e razzi vanno a munizioni, non a ricarica._
+_**✅ ASSEDIO: LA NEBBIA (2026-08-23):** un gas di cerume avanza dal fondo e obbliga a muoversi,_
+_invece di aspettare i nemici fermi in un angolo. Non tocca i nemici, fa danno nel tempo senza_
+_contraccolpo, ed e' ritagliata sulla sagoma del condotto._
+_**✅ INFEZIONE CHE SI SENTE (2026-08-24):** i gradi c'erano ma sparivano dentro gli arrotondamenti_
+_(vedi §Lezioni di bilanciamento). Ora vita +30% e danno +15% per grado, piu' un nemico in campo_
+_ogni due gradi._
+_**STATO ORA:** in Estetica resta un altro SET DI SFONDO. Restano gli **EASTER EGG** da scegliere_
+_e l'ARENA dedicata dell'assedio. Il resto del lavoro arriva dai playtest dei tester._
 
 **NOME: ✅ APPLICATO (2026-07-31).** L'app si chiama **WAXOUT** ("earwax" da solo portava al
 party game di Jackbox e a Earwax Clinic gia' su Play). Nel menu: "WAXOUT" grande e "The Earwax
@@ -168,6 +179,16 @@ un `location.reload()` puo' chiudere la scheda del preview → riaprirla. Dopo `
 il `create` gira al tick DOPO: non leggere subito `heroVisual`/`player` (aspetta o verifica `isActive`).
 Per i test in preview vale la regola god-mode robusta (metterlo nel hook `events.once('create')`, o il
 PG muore durante i riavvii e parte il game-over).
+
+### 📊 LA TABELLA DEI COLPI (`tools/tabella_colpi.py`, dal 2026-08-24)
+
+```
+python tools	abella_colpi.py
+```
+Stampa quanti colpi di getto serve ogni nemico a ogni grado di infezione, gia' in Markdown, da
+incollare in `ROADMAP.md` §LA MISURA CHE ORIENTA TUTTO. ⚠️ Esiste perche' quella tabella era stata
+scritta a mano ed era invecchiata due volte in una settimana (crosta ammorbidita, gradi di
+infezione rialzati), continuando a orientare decisioni con numeri che non erano piu' veri.
 
 ### 📷 FOTOGRAFARE UNA SCENA (`tools/foto.py`, dal 2026-08-21)
 
@@ -590,9 +611,13 @@ materiale di passaggio, **non investirci altro tempo** oltre alle correzioni di 
 
 ### ✅ APP ANDROID (Capacitor via GitHub Actions) — FATTA (2026-07-18)
 ⚠️ **L'APK va messo nella CARTELLA DEL GIOCO e chiamato col nome dell'app** (richiesta
-dell'utente 2026-08-03): in Download non si trova, e `app-debug.apk` — il nome che gli da'
-Gradle, che e' quello del progetto Android e non del gioco — non dice cos'e' ne' permette di
-distinguere due versioni. Il workflow ora lo rinomina LEGGENDO `appName` da
+dell'utente 2026-08-03, ribadita il 2026-08-24): in Download non si trova, e `app-debug.apk` — il
+nome che gli da' Gradle, che e' quello del progetto Android e non del gioco — non dice cos'e' ne'
+permette di distinguere due versioni.
+⚠️ **E NON E' UNA PIGNOLERIA.** Scaricato in `Downloads` il 2026-08-24, l'utente ha giocato un giro
+intero alla versione VECCHIA credendo fosse la nuova, e ha segnalato come difetti cose gia'
+corrette ("nello shop non compaiono i leggendari"). Mezz'ora buttata a cercare un guasto che non
+c'era. Il file giusto e' sempre `earwaxwar/Waxout.apk`, sovrascritto ogni volta. Il workflow ora lo rinomina LEGGENDO `appName` da
 `capacitor.config.json`, cosi' se un domani l'app cambia nome il file lo segue da solo.
 Il server per il telefono non ha nomi scritti dentro (serve la cartella e basta), quindi il
 cambio non lo tocca.
@@ -603,7 +628,9 @@ main → GitHub compila → `gh run download` scarica l'APK → messo in **`Waxo
 del gioco, gitignored: `.gitignore` ha `*.apk`) →
 l'utente lo prende dal telefono via `GIOCA-SU-TELEFONO.cmd` (`http://<IP>:8123/Waxout.apk`) e lo
 installa. **Larghezza ADATTIVA** (main.js) → niente bande nere ai lati. L'app parte e gira sul telefono.
-Resta: **icona app personalizzata** (ora generica), e la pubblicazione vera sullo store (rimandata).
+✅ Icona personalizzata: fatta. ✅ Pubblicazione sullo store: **fatta**, e le nuove versioni le
+carica l'utente di persona (l'APK di questo ciclo serve ai TESTER, il pacchetto per Play e' l'AAB
+firmato del secondo workflow — vedi `docs/PUBBLICARE.md`).
 
 ### 📦 APK da SFOLTIRE (misurato 2026-07-22, non urgente ma cresce)
 L'APK e' passato da 14 a **22 MB** e **~8 MB sono sprecati**: il workflow fa `cp -r assets www/`,
@@ -828,7 +855,9 @@ PG e nemici ci camminano via **heightmap-snap** (in `agganciaAlTerreno`: `body.y
 - **Freeze PC allo Start Run** (aperto, deprioritizzato; NON è l'audio; indagare prima dello store).
 - **Embed** degli sprite sheet in `assets_data.js` (per il doppio-click `file://`; l'APK li include già).
 - Ottimizzare il **peso** degli asset (APK ~14MB, ok per ora).
-- **Pubblicazione Play Store** + **ads** (AdMob): rimandati dall'utente a quando il gioco è rifinito.
+- ✅ **Pubblicazione Play Store: FATTA** (agosto 2026). Restano gli **ads** (AdMob), rimandati:
+  l'utente li valutera' a gioco assestato. ⚠️ Chiave di firma, segreti e caricamenti sono e restano
+  affari dell'utente — nessuna password, nessun file di firma passa da qui (vedi `docs/PUBBLICARE.md`).
 
 ---
 
