@@ -47,6 +47,22 @@ def rifinisci(f):
     bordo0 = np.asarray(vuoto0.filter(ImageFilter.MaxFilter(7))) > 0
     sporchi_prima = int((((a0 > 10) & bordo0 & (r0 - g0 > SOGLIA) & (b0 - g0 > SOGLIA))).sum())
 
+    # 1a-bis — CHIAZZE DI MAGENTA RIMASTE OPACHE. ⚠️ Non e' la frangia del bordo: e' chiave che lo
+    # scontorno non ha proprio riconosciuto, e resta li' come una macchia viola in mezzo all'arte
+    # (nel set 3 erano 16.240 pixel, e si vedevano nel menu). Succede dove il magenta della
+    # sorgente e' sporco — JPEG, ombre — e finisce fuori dalla tolleranza dello scontorno.
+    # Qui la regola e' STRETTISSIMA (rosso e blu quasi al massimo, verde molto basso): l'arte rosa
+    # non ci arriva mai nemmeno dopo che e' stata ravvivata.
+    a0m = np.asarray(im, dtype=np.int16)
+    chiazza = ((a0m[:, :, 3] > 10) & (a0m[:, :, 0] > 170) & (a0m[:, :, 2] > 170) & (a0m[:, :, 1] < 100))
+    chiazze_tolte = int(chiazza.sum())
+    if chiazze_tolte:
+        # allargata di un pixel, per portarsi via anche l'alone attorno
+        maschera = Image.fromarray((chiazza * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(3))
+        alpha0 = np.asarray(im.getchannel("A")).copy()
+        alpha0[np.asarray(maschera) > 0] = 0
+        im.putalpha(Image.fromarray(alpha0))
+
     # 1a — erosione dell'alpha: il minimo su una finestra 5x5 spegne i bordi
     alpha = im.getchannel("A").filter(ImageFilter.MinFilter(EROSIONE))
     im.putalpha(alpha)
@@ -76,7 +92,8 @@ def rifinisci(f):
     peso_prima = f.stat().st_size
     pulita.quantize(colors=COLORI, method=Image.FASTOCTREE).save(f, optimize=True)
     peso_dopo = f.stat().st_size
-    print(f"{f.name}: frangia magenta {sporchi_prima} -> {sporchi_dopo} pixel"
+    print(f"{f.name}: frangia {sporchi_prima} -> {sporchi_dopo} pixel"
+          f"  |  chiazze tolte {chiazze_tolte} pixel"
           f"  |  peso {peso_prima / 1024:.0f} KB -> {peso_dopo / 1024:.0f} KB")
 
 

@@ -102,6 +102,16 @@ window.GameGfx = {
   // Resta come manopola se un set futuro arrivasse fuori famiglia e non si volesse ricuocerlo.
   SET_TINTE: {},
 
+  // REGOLAZIONE DELLA POSA PER SET. ⚠️ I set non si inquadrano allo stesso modo: BG_LAYERS e'
+  // tarato sul set 2, e nei set nuovi il PRIMO PIANO ha il suo contenuto molto piu' in basso —
+  // finiva tutto dietro al terreno e a schermo si percepivano DUE piani invece di tre (segnalato
+  // dall'utente 2026-08-26). Qui si sposta e si scala lo strato per set, senza toccare l'arte.
+  // Numeri scelti guardando le schermate: e' inquadratura, si giudica a occhio e non a calcolo.
+  SET_STRATI: {
+    1: { near: { y: -140, scale: 1.05 } },
+    3: { near: { y: -150, scale: 1.05 } },
+  },
+
   // Fonde due tinte canale per canale (tema x set): moltiplicare due tinte equivale a passarle
   // una dopo l'altra, ed e' l'unico modo di tenerle indipendenti.
   fondiTinte(a, b) {
@@ -111,9 +121,27 @@ window.GameGfx = {
 
   // La tinta finale di uno strato: quella del tema, corretta per il set in uso.
   tintaStrato(i) {
-    const tema = (this.temaAttivo().strati || [])[i] || 0xffffff;
+    const piena = (this.temaAttivo().strati || [])[i] || 0xffffff;
+    // Smorzata verso il bianco, che per una tinta vuol dire "nessun effetto".
+    const tema = this.mescola(0xffffff, piena, this.FORZA_TEMA);
     const set = this.SET_TINTE[this.bgSetFor((window.GameState && window.GameState.level) || 1)];
     return set ? this.fondiTinte(tema, set) : tema;
+  },
+
+  // QUANTO PESA IL TEMA, da 0 (nessun effetto) a 1 (i valori scritti in TEMI per intero).
+  // ⚠️ Manopola unica e volutamente sola: l'utente ha detto "le tinte sono un filo troppo forti"
+  // (2026-08-26), e senza un numero solo avrei dovuto ritoccare a mano diciotto colori piu' i
+  // veli, con l'equilibrio fra i temi che si sfalda al primo ripensamento. Cosi' invece si gira
+  // questo e cambiano tutti insieme, mantenendo le proporzioni fra un tema e l'altro.
+  FORZA_TEMA: 0.6,
+
+  // Mescola due colori canale per canale (0 = tutto A, 1 = tutto B).
+  mescola(a, b, q) {
+    const c = (spost) => {
+      const va = (a >> spost) & 255, vb = (b >> spost) & 255;
+      return Math.round(va + (vb - va) * q);
+    };
+    return (c(16) << 16) | (c(8) << 8) | c(0);
   },
 
   // Il tema di questa run. ⚠️ Legge il grado di infezione SCELTO, non il record: si guarda cio' che
@@ -128,7 +156,23 @@ window.GameGfx = {
   // le funzioni che la leggono sono quattro e sparse (terreno, soffitto, pedane, timpano), e
   // aggiungere un parametro a tutte avrebbe dato quattro punti in cui dimenticarselo.
   applicaTema(scene) {
-    const t = this.temaAttivo();
+    const pieno = this.temaAttivo();
+    const base = this.TEMI[0];
+    const q = this.FORZA_TEMA;
+    // La CARNE si smorza verso quella del tema base (il cerume), non verso il bianco: e' li' che
+    // il gioco "torna normale", e mescolare col bianco avrebbe schiarito il terreno invece di
+    // riportarlo a casa.
+    const t = {
+      id: pieno.id,
+      strati: pieno.strati,
+      atmosfera: pieno.atmosfera,
+      carne: {
+        profondo: this.mescola(base.carne.profondo, pieno.carne.profondo, q),
+        crosta: this.mescola(base.carne.crosta, pieno.carne.crosta, q),
+        bordo: this.mescola(base.carne.bordo, pieno.carne.bordo, q),
+      },
+      velo: pieno.velo ? { colore: pieno.velo.colore, alpha: pieno.velo.alpha * q } : null,
+    };
     this.CARNE = t.carne;
     scene._tema = t;
   },
@@ -614,16 +658,23 @@ window.GameGfx = {
       scene.bgLayers = this.BG_LAYERS.map((L, i) => {
         const key = keys[i];
         const alta = scene.textures.get(key).getSourceImage().height;
+        // Regolazione per questo set, se ne ha una (vedi SET_STRATI).
+        const perSet = (this.SET_STRATI[set] || {})[L.role] || {};
+        const yStrato = perSet.y != null ? perSet.y : L.y;
+        const scalaVoluta = perSet.scale != null ? perSet.scale : L.scale;
         // ⚠️ LO STRATO DEVE ARRIVARE IN FONDO ALLO SCHERMO, sempre. La scala scritta in BG_LAYERS
         // era tarata sulle proporzioni del set 2; i set nuovi sono piu' larghi e bassi, e con
         // quella scala il fondale finiva PRIMA del bordo inferiore — nel gioco non si vedeva
         // (terreno e soffitto coprono), nel menu si' (segnalato dall'utente 2026-08-26: "un buco
         // nell'angolo in basso a destra"). Si prende la scala piu' grande fra quella voluta e
         // quella che serve a coprire, cosi' il difetto non puo' tornare con un set futuro.
-        const serve = (H - L.y + 8) / alta;
-        const scala = Math.max(L.scale, serve);
+        // ⚠️ La copertura obbligatoria vale SOLO per lo strato di fondo: e' l'unico che non puo'
+        // avere buchi, perche' dietro non c'e' nient'altro. Imporla anche agli altri li
+        // ingrandirebbe fino a coprire il fondo, che e' l'opposto del parallasse.
+        const serve = L.role === 'far' ? (H - yStrato + 8) / alta : 0;
+        const scala = Math.max(scalaVoluta, serve);
         const h = alta * scala;
-        const ts = scene.add.tileSprite(0, L.y, W, h, key)
+        const ts = scene.add.tileSprite(0, yStrato, W, h, key)
           .setOrigin(0, 0).setScrollFactor(0).setDepth(L.depth);
         ts.tileScaleX = scala; ts.tileScaleY = scala;
         if (L.alpha != null) ts.setAlpha(L.alpha);
