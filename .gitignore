@@ -36,8 +36,11 @@ package-lock.json
 # NON serve al gioco: l'upscale e' stato ABBANDONATO, gli sfondi si generano gia' grandi.
 chainner/
 
-# (La cartella 1 conteneva il primo tentativo INGRANDITO, provato e riscartato due volte. Ora
-# contiene arte nuova, generata come si deve: non e' piu' materiale da escludere.)
+# SFONDI: nel repository ci vanno SOLO i tre file cotti di ogni set (bg<N>_far/mid/near), non le
+# sorgenti da cui si ricavano. ⚠️ Le sorgenti sono 16 MB in tutto e servono una volta sola, alla
+# cottura: restano sul disco di chi lavora, non nella cronologia di tutti. E' la stessa regola gia'
+# scritta per gli sprite ("le sorgenti stanno in art_sources/, fuori da assets/"), che per gli
+# sfondi non era mai stata applicata.
 
 # Registrazioni schermo occasionali
 *.mp4
@@ -51,3 +54,8 @@ __pycache__/
 # Screenshot e GIF generati da tools/foto.py: materiale di lavoro, non del gioco
 foto_*.png
 foto_*.gif
+
+assets/backgrounds/*/*
+!assets/backgrounds/*/bg*_far.jpg
+!assets/backgrounds/*/bg*_mid.png
+!assets/backgrounds/*/bg*_near.png
