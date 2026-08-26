@@ -54,22 +54,13 @@ jobs:
 
       # Stessa cartella web dell'APK di prova: elenco esplicito, non "copia tutta assets/".
       - name: Assembla la cartella web (www)
-        run: |
-          rm -rf www
-          mkdir -p www/assets/backgrounds/2 www/assets/spritesheets/hero www/assets/spritesheets/enemies
-          cp index.html www/
-          cp -r vendor src www/
-          cp -r assets/sprites assets/musica www/assets/
-          cp assets/backgrounds/2/bg2_far.jpg assets/backgrounds/2/bg2_mid.png assets/backgrounds/2/bg2_near.png www/assets/backgrounds/2/
-          cp assets/spritesheets/hero/*_px.png www/assets/spritesheets/hero/
-          cp assets/spritesheets/enemies/*.png www/assets/spritesheets/enemies/
+        # ⚠️ UNA RIGA, e il contenuto sta in tools/assembla_www.sh. Prima l'elenco dei file da
+        # impacchettare era copiato in TUTTI E DUE i workflow, e il 2026-08-26 e' successo quello
+        # che doveva succedere: aggiornato quello dell'APK di prova, dimenticato quello dell'AAB
+        # da pubblicare. Il pacchetto per lo store sarebbe uscito senza le texture del cerume e
+        # con un solo sfondo su tre, e nessun controllo poteva accorgersene.
+        run: bash tools/assembla_www.sh
 
-      # ⚠️ IL PASSO PIU' IMPORTANTE DI TUTTI. Si spegne il pannello di prova nella COPIA dentro www/,
-      # non nel file del repository: cosi' chi continua a lavorare al gioco se lo ritrova acceso
-      # come sempre, e non c'e' niente da ricordarsi di rimettere a posto dopo.
-      # Il controllo qui sotto NON e' una formalita': se un domani la riga in state.js cambiasse
-      # forma, la sostituzione fallirebbe IN SILENZIO e si pubblicherebbe un gioco con vita
-      # infinita e cerume gratis. Meglio una compilazione che si ferma.
       - name: Spegni il pannello di prova
         run: |
           sed -i 's/PANNELLO_PROVA: true/PANNELLO_PROVA: false/' www/src/state.js

@@ -50,31 +50,12 @@ jobs:
       # un'app rotta in silenzio.
       # ⚠️ QUANDO SI AGGIUNGE UN SET DI SFONDO (window.BG_SETS in BootScene) VA AGGIUNTO ANCHE QUI.
       - name: Assembla la cartella web (www)
-        run: |
-          rm -rf www
-          mkdir -p www/assets/backgrounds www/assets/spritesheets/hero www/assets/spritesheets/enemies
-          cp index.html www/
-          cp -r vendor src www/
-          # assets/wax SI COPIA (dal 2026-08-26): prima era incorporato come data URI in
-          # src/assets_data.js, cioe' 2,17 MB di TESTO dentro il codice — piu' pesante dei PNG
-          # (il base64 costa un terzo in piu') e da leggere a ogni avvio. Restano incorporati solo
-          # i pochi KB del fondale di ripiego.
-          cp -r assets/sprites assets/musica assets/wax www/assets/
-          # SFONDI: si copiano i file COTTI di OGNI set, trovandoli invece di elencarli.
-          # ⚠️ Prima era scritto a mano il solo set 2. Aggiungendo i set 1 e 3 (2026-08-24) l'app
-          # sarebbe partita senza due sfondi su tre — e il difetto non si vede in nessun modo qui:
-          # il gioco sul computer li trova, l'APK no. Un elenco a mano di cose che si aggiungono
-          # nel tempo e' una trappola che scatta sempre, e sempre in ritardo.
-          # Le SORGENTI (fondale.png, mid.png, back.jpg...) restano fuori: servono solo a ricuocere.
-          for f in assets/backgrounds/*/bg*_far.jpg assets/backgrounds/*/bg*_mid.png assets/backgrounds/*/bg*_near.png; do
-            [ -e "$f" ] || continue
-            mkdir -p "www/$(dirname "$f")"
-            cp "$f" "www/$f"
-          done
-          cp assets/spritesheets/hero/*_px.png www/assets/spritesheets/hero/
-          cp assets/spritesheets/enemies/*.png www/assets/spritesheets/enemies/
-          echo "--- peso della cartella www ---"
-          du -sh www www/src www/assets/* | sort -h
+        # ⚠️ UNA RIGA, e il contenuto sta in tools/assembla_www.sh. Prima l'elenco dei file da
+        # impacchettare era copiato in TUTTI E DUE i workflow, e il 2026-08-26 e' successo quello
+        # che doveva succedere: aggiornato quello dell'APK di prova, dimenticato quello dell'AAB
+        # da pubblicare. Il pacchetto per lo store sarebbe uscito senza le texture del cerume e
+        # con un solo sfondo su tre, e nessun controllo poteva accorgersene.
+        run: bash tools/assembla_www.sh
 
       - name: Crea il progetto Android
         run: npx cap add android
