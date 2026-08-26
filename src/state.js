@@ -570,6 +570,11 @@ window.GameState = {
     this.tempoDiGioco = 0;
     this.bombaPronta = 0;
     this.granataPronta = 0;
+    // DA QUALE SFONDO COMINCIA QUESTA RUN. ⚠️ Serve perche' una run ha TRE tratti da cinque
+    // livelli, e i set sono quattro: con la rotazione che partiva sempre dal primo, il quarto non
+    // si sarebbe visto MAI. Sorteggiando l'inizio, ogni run mostra tre ambienti su quattro e
+    // cambia combinazione — che e' anche piu' varieta' di prima, non solo un pareggio.
+    this.sfondoDiPartenza = Math.floor(Math.random() * ((window.BG_SETS || [1]).length));
     this.ownedAbilities = [];
     this.prossimoLivello = null;
     this.runStartAt = Date.now();

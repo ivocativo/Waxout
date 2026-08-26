@@ -93,7 +93,7 @@ class BootScene extends Phaser.Scene {
     // regge quasi, ma messa accanto al set 2 e' visibilmente piu' piatta. Ricotta e provata a
     // schermo il 2026-08-24, l'utente l'ha guardata e l'ha scartata. Non riprovarci: la strada
     // sono set NUOVI generati gia' grandi.
-    window.BG_SETS = [1, 2, 3];
+    window.BG_SETS = [1, 2, 3, 4];
     window.BG_SETS.forEach((s) => {
       const dir = 'assets/backgrounds/' + s + '/';
       aimg('bg' + s + '_far', dir + 'bg' + s + '_far.jpg');

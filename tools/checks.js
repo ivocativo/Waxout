@@ -2085,6 +2085,9 @@ window.__earwaxChecks = function (opts) {
     const guasti = [];
     (window.BG_SETS || []).forEach((set, i) => {
       const gsS = avviaLivello(1 + i * 5);          // un livello per tratto: cambia set ogni 5
+      window.GameState.sfondoDiPartenza = 0;        // niente sorteggio: qui si vogliono tutti
+      gsS.scene.restart();
+      avanza(gsS, 12);
       (gsS.bgLayers || []).forEach((L, k) => {
         const fondo = L.s.y + L.s.height;
         if (fondo < H) guasti.push('set ' + set + ' strato ' + k + ': arriva a ' + Math.round(fondo) + ' invece di ' + H);

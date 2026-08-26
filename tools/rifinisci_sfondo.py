@@ -1,29 +1,25 @@
-"""rifinisci_sfondo.py — ultima passata su un set di sfondo COTTO: bordi puliti e peso ridotto.
+"""rifinisci_sfondo.py — tutta la lavorazione che viene DOPO la cottura, nell'ordine giusto.
 
-    python tools\\rifinisci_sfondo.py 3
+    python tools\rifinisci_sfondo.py 4 [--come 2]
 
-Da lanciare dopo `bake_background_set.ps1`. Fa due cose sui due strati con trasparenza
-(`bg<N>_mid.png`, `bg<N>_near.png`).
+Quattro passaggi su `bg<N>_mid.png` e `bg<N>_near.png` (il `far` e' un JPG: niente trasparenza,
+niente tavolozza, si limita all'armonizzazione del colore).
 
-1) TOGLIE LA FRANGIA MAGENTA.
-   ⚠️ Scontornare non basta mai del tutto: sul bordo restano pixel a meta' fra l'arte e la chiave,
-   e quella meta' e' magenta. Misurato sul materiale del 2026-08-24: **1-2% dei pixel visibili**
-   aveva una dominante magenta, e a schermo si vedeva come un contorno viola attorno alle
-   formazioni (se n'e' accorto l'utente guardando le anteprime).
-   Rimedio in due tempi:
-   - **si erode l'alpha** di un paio di pixel: la sagoma si stringe di un'inezia — su uno sfondo
-     non se ne accorge nessuno — e si porta via l'intera fascia sporca;
-   - **despill** su cio' che resta: dove rosso E blu stanno tutti e due ben sopra il verde, si
-     riportano giu'. ⚠️ La condizione e' "tutti e due": l'arte e' rosa e malva, cioe' ha comunque
-     il rosso sopra il verde, e una regola piu' larga la scolorirebbe invece di pulirla.
+⚠️ L'ORDINE E' IL PUNTO, ed e' per questo che i quattro passaggi stanno in UN SOLO strumento e non
+in tre. Quando la pulizia del magenta girava DOPO l'armonizzazione, su una pittura molto satura
+scambiava i punti luce dell'arte per chiave e le bucava — a schermo si vedevano quadratini di
+sfondo dentro le formazioni (successo davvero col set 4, 2026-08-26). La chiave e' pura solo
+appena usciti dalla cottura: e' li' che va tolta.
 
-2) RIDUCE IL PESO a un quinto, portando la tavolozza a 256 colori.
-   Misurato: lo strato di mezzo passa da 2.988 KB a 608 KB **senza differenza visibile** — l'arte
-   pittorica usa sfumature vicine dentro una gamma stretta, il caso in cui 256 colori bastano.
-   Senza questo passaggio quattro set raddoppiavano il peso dell'app.
-   FASTOCTREE e' l'unico metodo di Pillow che quantizza TENENDO la trasparenza.
-
-Non tocca il `far`: e' un JPG, non ha ne' trasparenza ne' tavolozza.
+1. CHIAZZE DI MAGENTA rimaste opache: chiave che lo scontorno non ha riconosciuto affatto (nel
+   set 3 erano 16.240 pixel, e si vedevano nel menu). Regola strettissima, e applicata quando
+   l'arte e' ancora nei suoi colori originali.
+2. FRANGIA SUL BORDO: si erode il contorno di 2px e si fa il despill su cio' che resta.
+   ⚠️ Solo lungo il bordo: la condizione sul colore da sola, su arte rosa, prende anche il disegno.
+3. ARMONIZZAZIONE verso un set di riferimento: saturazione e luce misurate SOI PIXEL VISIBILI
+   (meta' del primo piano e' trasparente: contando i buchi la media direbbe "scurissimo").
+   ⚠️ Serve perche' la tinta di Phaser moltiplica: puo' spegnere e virare, mai ravvivare.
+4. PESO: tavolozza a 256 colori, che porta gli strati a un quinto senza differenza visibile.
 """
 import sys
 from pathlib import Path
@@ -37,81 +33,111 @@ RADICE = Path(__file__).resolve().parent.parent
 EROSIONE = 5        # lato del filtro di minimo: 5 = due pixel via per lato
 SOGLIA = 40         # di quanto rosso e blu devono superare il verde per dirsi "frangia"
 COLORI = 256
+LIMITE = (0.7, 2.2)   # quanto si puo' spingere l'armonizzazione, in su e in giu'
 
 
-def rifinisci(f):
-    im = Image.open(f).convert("RGBA")
-    prima = np.asarray(im, dtype=np.int16)
-    r0, g0, b0, a0 = prima[:, :, 0], prima[:, :, 1], prima[:, :, 2], prima[:, :, 3]
-    vuoto0 = Image.fromarray(((a0 < 10) * 255).astype(np.uint8))
-    bordo0 = np.asarray(vuoto0.filter(ImageFilter.MaxFilter(7))) > 0
-    sporchi_prima = int((((a0 > 10) & bordo0 & (r0 - g0 > SOGLIA) & (b0 - g0 > SOGLIA))).sum())
+def misura(im):
+    """Saturazione e luminosita' medie dei soli pixel visibili."""
+    a = np.asarray(im, dtype=np.float32) / 255
+    visibile = a[:, :, 3] > 0.4
+    if visibile.sum() < 100:
+        return None, None
+    rgb = a[:, :, :3][visibile]
+    mx = rgb.max(axis=1)
+    mn = rgb.min(axis=1)
+    sat = np.where(mx > 0, (mx - mn) / np.maximum(mx, 1e-6), 0)
+    return float(sat.mean()), float(mx.mean())
 
-    # 1a-bis — CHIAZZE DI MAGENTA RIMASTE OPACHE. ⚠️ Non e' la frangia del bordo: e' chiave che lo
-    # scontorno non ha proprio riconosciuto, e resta li' come una macchia viola in mezzo all'arte
-    # (nel set 3 erano 16.240 pixel, e si vedevano nel menu). Succede dove il magenta della
-    # sorgente e' sporco — JPEG, ombre — e finisce fuori dalla tolleranza dello scontorno.
-    # Qui la regola e' STRETTISSIMA (rosso e blu quasi al massimo, verde molto basso): l'arte rosa
-    # non ci arriva mai nemmeno dopo che e' stata ravvivata.
-    a0m = np.asarray(im, dtype=np.int16)
-    chiazza = ((a0m[:, :, 3] > 10) & (a0m[:, :, 0] > 170) & (a0m[:, :, 2] > 170) & (a0m[:, :, 1] < 100))
-    chiazze_tolte = int(chiazza.sum())
-    if chiazze_tolte:
-        # allargata di un pixel, per portarsi via anche l'alone attorno
+
+def correggi(im, fs, fv):
+    a = np.asarray(im, dtype=np.float32) / 255
+    rgb, alpha = a[:, :, :3], a[:, :, 3]
+    grigio = rgb.mean(axis=2, keepdims=True)
+    # saturazione: si allontana ogni canale dal proprio grigio
+    rgb = np.clip(grigio + (rgb - grigio) * fs, 0, 1)
+    rgb = np.clip(rgb * fv, 0, 1)
+    fuori = np.concatenate([rgb, alpha[:, :, None]], axis=2)
+    return Image.fromarray((fuori * 255).astype(np.uint8), "RGBA")
+
+
+
+def togli_chiazze(im):
+    """Chiave rimasta opaca in mezzo all'arte. Da fare PRIMA di ravvivare i colori."""
+    a = np.asarray(im, dtype=np.int16)
+    chiazza = ((a[:, :, 3] > 10) & (a[:, :, 0] > 170) & (a[:, :, 2] > 170) & (a[:, :, 1] < 100)
+               & (np.abs(a[:, :, 0] - a[:, :, 2]) < 45))
+    quante = int(chiazza.sum())
+    if quante:
         maschera = Image.fromarray((chiazza * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(3))
-        alpha0 = np.asarray(im.getchannel("A")).copy()
-        alpha0[np.asarray(maschera) > 0] = 0
-        im.putalpha(Image.fromarray(alpha0))
+        alpha = np.asarray(im.getchannel("A")).copy()
+        alpha[np.asarray(maschera) > 0] = 0
+        im.putalpha(Image.fromarray(alpha))
+    return quante
 
-    # 1a — erosione dell'alpha: il minimo su una finestra 5x5 spegne i bordi
+
+def togli_frangia(im):
+    """Erosione del contorno + despill, SOLO lungo il bordo."""
     alpha = im.getchannel("A").filter(ImageFilter.MinFilter(EROSIONE))
     im.putalpha(alpha)
-
-    # 1b — despill su quel che resta, SOLO LUNGO IL BORDO.
-    # ⚠️ La condizione sul colore da sola NON BASTA, e crederlo e' costato un giro: ravvivando
-    # l'arte (armonizza_sfondo.py) la pittura rosa comincia a soddisfarla, e il despill si e'
-    # mangiato 1,3 MILIONI di pixel di disegno invece dei pochi del contorno. La frangia vive
-    # attaccata alla trasparenza: si guarda li' e basta.
-    alpha_np = np.asarray(alpha)
-    trasparente = Image.fromarray(((alpha_np < 10) * 255).astype(np.uint8))
-    vicino_al_vuoto = np.asarray(trasparente.filter(ImageFilter.MaxFilter(7))) > 0
+    trasparente = Image.fromarray(((np.asarray(alpha) < 10) * 255).astype(np.uint8))
+    bordo = np.asarray(trasparente.filter(ImageFilter.MaxFilter(7))) > 0
     a = np.asarray(im, dtype=np.int16)
     r, g, b, al = a[:, :, 0], a[:, :, 1], a[:, :, 2], a[:, :, 3]
-    frangia = (al > 10) & vicino_al_vuoto & (r - g > SOGLIA) & (b - g > SOGLIA)
+    frangia = (al > 10) & bordo & (r - g > SOGLIA) & (b - g > SOGLIA)
+    quante = int(frangia.sum())
     tetto = g + SOGLIA
     a[:, :, 0] = np.where(frangia, np.minimum(r, tetto), r)
     a[:, :, 2] = np.where(frangia, np.minimum(b, tetto), b)
-    pulita = Image.fromarray(a.astype(np.uint8), "RGBA")
+    return Image.fromarray(a.astype(np.uint8), "RGBA"), quante
 
-    dopo = np.asarray(pulita, dtype=np.int16)
-    r1, g1, b1, a1 = dopo[:, :, 0], dopo[:, :, 1], dopo[:, :, 2], dopo[:, :, 3]
-    vuoto1 = Image.fromarray(((a1 < 10) * 255).astype(np.uint8))
-    bordo1 = np.asarray(vuoto1.filter(ImageFilter.MaxFilter(7))) > 0
-    sporchi_dopo = int((((a1 > 10) & bordo1 & (r1 - g1 > SOGLIA) & (b1 - g1 > SOGLIA))).sum())
 
-    peso_prima = f.stat().st_size
-    pulita.quantize(colors=COLORI, method=Image.FASTOCTREE).save(f, optimize=True)
-    peso_dopo = f.stat().st_size
-    print(f"{f.name}: frangia {sporchi_prima} -> {sporchi_dopo} pixel"
-          f"  |  chiazze tolte {chiazze_tolte} pixel"
-          f"  |  peso {peso_prima / 1024:.0f} KB -> {peso_dopo / 1024:.0f} KB")
+def fattori(im, im_rif):
+    s0, v0 = misura(im)
+    s1, v1 = misura(im_rif)
+    if s0 is None or s1 is None or s0 < 0.01:
+        return 1.0, 1.0
+    return (min(max(s1 / s0, LIMITE[0]), LIMITE[1]),
+            min(max(v1 / v0, LIMITE[0]), LIMITE[1]))
 
 
 def main():
     if len(sys.argv) < 2:
-        print("Uso: python tools\\rifinisci_sfondo.py <numero del set>")
+        print("Uso: python tools\rifinisci_sfondo.py <set> [--come <set di riferimento>]")
         return 2
     n = sys.argv[1]
+    rif = sys.argv[sys.argv.index("--come") + 1] if "--come" in sys.argv else "2"
     cartella = RADICE / "assets" / "backgrounds" / n
+    cartella_rif = RADICE / "assets" / "backgrounds" / rif
     if not cartella.is_dir():
         print(f"Cartella non trovata: {cartella}")
         return 2
-    for ruolo in ("mid", "near"):
-        f = cartella / f"bg{n}_{ruolo}.png"
-        if f.exists():
-            rifinisci(f)
-        else:
+
+    for ruolo, est in [("far", "jpg"), ("mid", "png"), ("near", "png")]:
+        f = cartella / f"bg{n}_{ruolo}.{est}"
+        f_rif = cartella_rif / f"bg{rif}_{ruolo}.{est}"
+        if not f.exists():
             print(f"Manca {f.name}: salto")
+            continue
+        im = Image.open(f).convert("RGBA")
+        peso_prima = f.stat().st_size
+        chiazze = frangia = 0
+        if est == "png":
+            chiazze = togli_chiazze(im)
+            im, frangia = togli_frangia(im)
+        if f_rif.exists() and n != rif:
+            fs, fv = fattori(im, Image.open(f_rif).convert("RGBA"))
+            im = correggi(im, fs, fv)
+        else:
+            fs = fv = 1.0
+        if est == "jpg":
+            fondo = Image.new("RGB", im.size, (26, 12, 20))
+            fondo.paste(im, (0, 0), im)
+            fondo.save(f, quality=86, optimize=True)
+        else:
+            im.quantize(colors=COLORI, method=Image.FASTOCTREE).save(f, optimize=True)
+        print(f"{f.name}: chiazze {chiazze}, frangia {frangia}, "
+              f"colore x{fs:.2f} sat x{fv:.2f} luce  |  "
+              f"peso {peso_prima / 1024:.0f} -> {f.stat().st_size / 1024:.0f} KB")
     return 0
 
 

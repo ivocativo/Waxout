@@ -73,9 +73,12 @@ lontani dall'ambra.
  2. **Arte dedicata solo dove serve davvero**, uno o due temi. Da valutare dopo averli giocati:
     la ricoloritura potrebbe bastare per quasi tutti.
 
-✅ **DUE SET DI SFONDO NUOVI (2026-08-24).** Generati dall'utente e montati: `BG_SETS = [1, 2, 3]`,
-cioe' **tre ambienti diversi in una run da 15 livelli**, uno ogni cinque, senza ripetizioni. Prima
-ce n'era uno solo per tutti e quindici.
+✅ **TRE SET DI SFONDO NUOVI (2026-08-24/26).** Generati dall'utente e montati: `BG_SETS =
+[1, 2, 3, 4]`. Prima ce n'era uno solo per tutti e quindici i livelli.
+⚠️ **Con quattro set il quarto non si sarebbe visto MAI:** una run ha TRE tratti da cinque livelli
+e la rotazione partiva sempre dal primo. Ora ogni run **sorteggia da dove cominciare**
+(`GameState.sfondoDiPartenza`), quindi vede tre ambienti su quattro e cambia combinazione — piu'
+varieta' di prima, non solo un pareggio.
 La lavorazione ora e' in tre comandi, e i due nuovi strumenti nascono da due difetti misurati:
 ```
 python tools\prepara_sfondo.py <N>
@@ -97,6 +100,14 @@ python tools\rifinisci_sfondo.py <N>
    avere quattro ambienti in un'app da 16 MB.
  - ⚠️ **La misura di cottura va scelta guardando l'ALTEZZA**, non la larghezza: gli strati hanno
    proporzioni diverse fra loro e con `-Width` troppo basso il fondale non copre lo schermo.
+ - ⚠️ **I generatori mettono il contenuto del PRIMO PIANO troppo in basso**, e li' lo copre il
+   terreno del gioco: a schermo si percepiscono due piani invece di tre. Si corregge
+   l'inquadratura per set in `GameGfx.SET_STRATI` — e' inquadratura, si tara guardando.
+ - ⚠️ **L'ORDINE DELLA LAVORAZIONE E' PARTE DELLA LAVORAZIONE.** Pulizia del magenta, bordi,
+   colore e peso stanno in un unico strumento apposta: quando la pulizia girava DOPO
+   l'armonizzazione, su una pittura satura scambiava i punti luce per chiave e bucava l'arte
+   (quadratini di sfondo dentro le formazioni, set 4). La chiave e' pura solo appena usciti dalla
+   cottura: e' li' che va tolta.
 ⚠️ Da fare comunque: oggi `BG_SETS = [2]`, cioe' **un solo set per tutti e 15 i livelli**. La
 varieta' dentro la run non esiste ancora, e non e' un problema di temi ma di quel numero.
 

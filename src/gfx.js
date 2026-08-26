@@ -110,6 +110,7 @@ window.GameGfx = {
   SET_STRATI: {
     1: { near: { y: -140, scale: 1.05 } },
     3: { near: { y: -150, scale: 1.05 } },
+    4: { near: { y: -120, scale: 1.05 } },
   },
 
   // Fonde due tinte canale per canale (tema x set): moltiplicare due tinte equivale a passarle
@@ -642,7 +643,10 @@ window.GameGfx = {
   bgSetFor(level) {
     const sets = (window.BG_SETS && window.BG_SETS.length) ? window.BG_SETS : null;
     if (!sets) return null;
-    return sets[Math.floor((Math.max(1, level) - 1) / 5) % sets.length];
+    // Il tratto (uno ogni 5 livelli) piu' il punto di partenza sorteggiato a inizio run.
+    const tratto = Math.floor((Math.max(1, level) - 1) / 5);
+    const inizio = (window.GameState && window.GameState.sfondoDiPartenza) || 0;
+    return sets[(tratto + inizio) % sets.length];
   },
 
   drawBackground(scene) {
