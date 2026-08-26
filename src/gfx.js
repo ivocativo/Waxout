@@ -88,6 +88,28 @@ window.GameGfx = {
       velo: { colore: 0x00e5ff, alpha: 0.08 }, atmosfera: 'onde' },
   ],
 
+  // CORREZIONE DI COLORE PER SET. ⚠️ I set non nascono uguali: il 2 e' rosa caldo, l'1 e il 3
+  // escono grigi-malva, e passando da un tratto all'altro si vedeva il salto (segnalato
+  // dall'utente 2026-08-26: "il primo sfondo tende al grigio invece che al rosa"). Qui ognuno
+  // viene riportato nella stessa famiglia, senza rigenerare l'arte.
+  // ⚠️ Si moltiplica, quindi si puo' solo TOGLIERE: per andare verso il rosa si abbassano verde e
+  // blu, non si alza il rosso. Ecco perche' i valori partono tutti da 0xff sul rosso.
+  SET_TINTE: { 1: 0xffb0c4, 3: 0xffb4c8 },
+
+  // Fonde due tinte canale per canale (tema x set): moltiplicare due tinte equivale a passarle
+  // una dopo l'altra, ed e' l'unico modo di tenerle indipendenti.
+  fondiTinte(a, b) {
+    const c = (spost) => Math.round((((a >> spost) & 255) * ((b >> spost) & 255)) / 255);
+    return (c(16) << 16) | (c(8) << 8) | c(0);
+  },
+
+  // La tinta finale di uno strato: quella del tema, corretta per il set in uso.
+  tintaStrato(i) {
+    const tema = (this.temaAttivo().strati || [])[i] || 0xffffff;
+    const set = this.SET_TINTE[this.bgSetFor((window.GameState && window.GameState.level) || 1)];
+    return set ? this.fondiTinte(tema, set) : tema;
+  },
+
   // Il tema di questa run. ⚠️ Legge il grado di infezione SCELTO, non il record: si guarda cio' che
   // si sta giocando adesso.
   temaAttivo() {
@@ -112,7 +134,7 @@ window.GameGfx = {
     // VELO: l'unico modo di AGGIUNGERE luce a un'immagine che non ce l'ha (la tinta moltiplica).
     // Sta sotto a terreno e soffitto (profondita' -12 contro 4): scalda il fondale, non il gioco.
     if (t.velo) {
-      scene.add.rectangle(W / 2, H / 2, W, H, t.velo.colore, t.velo.alpha)
+      scene._velo = scene.add.rectangle(W / 2, H / 2, W, H, t.velo.colore, t.velo.alpha)
         .setScrollFactor(0).setDepth(-12).setBlendMode(Phaser.BlendModes.ADD);
     }
     if (!t.atmosfera) { scene._atmo = null; return; }
@@ -147,6 +169,22 @@ window.GameGfx = {
       p.push(o);
     }
     scene._atmo = { tipo: t.atmosfera, p, t: 0 };
+  },
+
+  // Cambia il tema di una scena GIA' disegnata: ritinge gli strati e rifa velo e atmosfera.
+  // Serve al menu, dove si sceglie il grado di infezione e lo sfondo deve rispondere subito —
+  // ⚠️ senza questo cambiava solo per effetto collaterale del cambio lingua, che ridisegna tutta
+  // la scena (segnalato dall'utente 2026-08-26).
+  ritingiSfondo(scene) {
+    this.applicaTema(scene);
+    (scene.bgLayers || []).forEach((L, i) => {
+      const tinta = this.tintaStrato(i);
+      if (tinta === 0xffffff) L.s.clearTint(); else L.s.setTint(tinta);
+    });
+    // Velo e particelle vanno buttati e rifatti: appartengono al tema vecchio.
+    if (scene._velo) { scene._velo.destroy(); scene._velo = null; }
+    if (scene._atmo) { scene._atmo.p.forEach((o) => o.destroy()); scene._atmo = null; }
+    this.vestiLaScena(scene);
   },
 
   // Un fotogramma d'aria. La chiama updateBackground, che gira gia' a ogni fotogramma.
@@ -569,14 +607,22 @@ window.GameGfx = {
       scene.bgBaseY = 0;
       scene.bgLayers = this.BG_LAYERS.map((L, i) => {
         const key = keys[i];
-        const h = scene.textures.get(key).getSourceImage().height * L.scale;
+        const alta = scene.textures.get(key).getSourceImage().height;
+        // ⚠️ LO STRATO DEVE ARRIVARE IN FONDO ALLO SCHERMO, sempre. La scala scritta in BG_LAYERS
+        // era tarata sulle proporzioni del set 2; i set nuovi sono piu' larghi e bassi, e con
+        // quella scala il fondale finiva PRIMA del bordo inferiore — nel gioco non si vedeva
+        // (terreno e soffitto coprono), nel menu si' (segnalato dall'utente 2026-08-26: "un buco
+        // nell'angolo in basso a destra"). Si prende la scala piu' grande fra quella voluta e
+        // quella che serve a coprire, cosi' il difetto non puo' tornare con un set futuro.
+        const serve = (H - L.y + 8) / alta;
+        const scala = Math.max(L.scale, serve);
+        const h = alta * scala;
         const ts = scene.add.tileSprite(0, L.y, W, h, key)
           .setOrigin(0, 0).setScrollFactor(0).setDepth(L.depth);
-        ts.tileScaleX = L.scale; ts.tileScaleY = L.scale;
+        ts.tileScaleX = scala; ts.tileScaleY = scala;
         if (L.alpha != null) ts.setAlpha(L.alpha);
-        // La tinta viene dal TEMA della run (vedi TEMI): quella scritta in BG_LAYERS resta come
-        // ripiego per le schermate che non hanno un grado di infezione da mostrare.
-        const tinta = (this.temaAttivo().strati || [])[i] || L.tint;
+        // La tinta viene dal TEMA della run, corretta per il set in uso (vedi tintaStrato).
+        const tinta = this.tintaStrato(i);
         if (tinta && tinta !== 0xffffff) ts.setTint(tinta);
         return { s: ts, f: L.f };
       });

@@ -112,6 +112,27 @@ SCENE = {
     # Confronto fra i due set di sfondo: stesso tema, livelli diversi (il set cambia ogni 5).
     "set1": _tema(0).replace("G.level = 3", "G.level = 3"),
     "set2": _tema(0).replace("G.level = 3", "G.level = 6"),
+    "set3": _tema(0).replace("G.level = 3", "G.level = 11"),
+    # Il menu con il SELETTORE DI INFEZIONE aperto: si controlla che le frecce non coprano il nome
+    # della malattia (che e' lungo quanto la malattia vuole).
+    "menu_infezione": """
+        const g = window.game;
+        window.Meta.forzaInfezione(window.CONFIG.INFEZIONE_MAX);
+        window.GameState.infezione = 3;
+        g.scene.start('MenuScene');
+        await new Promise(r => setTimeout(r, 900));
+    """,
+    # Il menu di PAUSA: si controlla che i quattro pulsanti non finiscano sui tasti dell'audio.
+    "pausa": """
+        const g = window.game, G = window.GameState;
+        G.reset(); G.level = 3;
+        g.scene.start('GameScene');
+        await new Promise(r => setTimeout(r, 1200));
+        const s = g.scene.getScene('GameScene');
+        s.scene.launch('PauseScene', { from: 'GameScene' });
+        s.scene.pause();
+        await new Promise(r => setTimeout(r, 600));
+    """,
     # Il menu principale cosi' com'e'.
     "menu": """
         const g = window.game;

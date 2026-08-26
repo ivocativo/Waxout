@@ -100,11 +100,20 @@ class MenuScene extends Phaser.Scene {
       }).setOrigin(0.5);
       // Il nome della malattia accanto al numero: e' il tema che si sta per giocare (vedi
       // GameGfx.TEMI). Un numero da solo non dice dove stai andando.
-      const refresh = () => label.setText(T.t('menu_infezione', {
-        n: window.GameState.infezione,
-        tema: T.t('tema_' + window.GameGfx.temaAttivo().id),
-      }));
-      refresh();
+      const refresh = () => {
+        label.setText(T.t('menu_infezione', {
+          n: window.GameState.infezione,
+          tema: T.t('tema_' + window.GameGfx.temaAttivo().id),
+        }));
+        // ⚠️ LE FRECCE SI SPOSTANO CON LA SCRITTA. Erano a distanza fissa (96px dal centro), e da
+        // quando accanto al numero c'e' il nome della malattia le parole lunghe ci finivano sotto
+        // (segnalato dall'utente 2026-08-26). Si misura la scritta e si mettono di la'.
+        const mezza = label.width / 2 + 34;
+        if (this._frecce) this._frecce.forEach((f) => f.setX(W / 2 + f._verso * mezza));
+        // Lo SFONDO deve seguire il grado scelto: e' il tema che cambia, e il tema decide le
+        // tinte. Prima si aggiornava solo per caso, cambiando lingua (che ridisegna la scena).
+        window.GameGfx.ritingiSfondo(this);
+      };
       const arrow = (dx, chr) => {
         const a = this.add.text(W / 2 + dx, iy, chr, {
           fontFamily: 'monospace', fontSize: '22px', color: '#14161f',
@@ -117,10 +126,11 @@ class MenuScene extends Phaser.Scene {
           window.GameState.infezione = Phaser.Math.Clamp((window.GameState.infezione || 0) + dx / Math.abs(dx), 0, unlocked);
           refresh();
         });
+        a._verso = dx / Math.abs(dx);
         return a;
       };
-      arrow(-96, '<');
-      arrow(96, '>');
+      this._frecce = [arrow(-96, '<'), arrow(96, '>')];
+      refresh();                                   // ...dopo le frecce: e' lui a posizionarle
     } else {
       window.GameState.infezione = 0;   // non ancora sbloccato: sempre base
     }

@@ -2071,6 +2071,61 @@ window.__earwaxChecks = function (opts) {
     }
   }
 
+  // [57] OGNI SET DI SFONDO COPRE TUTTO LO SCHERMO.
+  // ⚠️ Nato da un difetto vero (2026-08-26): i set nuovi sono piu' larghi e bassi del primo, e con
+  // la scala scritta a mano il fondale finiva prima del bordo inferiore. Nel GIOCO non si vedeva —
+  // terreno e soffitto coprono — ma nel MENU si', come un buco nell'angolo. E' il tipo di difetto
+  // che torna a ogni set nuovo, percio' va sorvegliato invece che corretto una volta.
+  {
+    const H = window.CONFIG.HEIGHT;
+    const guasti = [];
+    (window.BG_SETS || []).forEach((set, i) => {
+      const gsS = avviaLivello(1 + i * 5);          // un livello per tratto: cambia set ogni 5
+      (gsS.bgLayers || []).forEach((L, k) => {
+        const fondo = L.s.y + L.s.height;
+        if (fondo < H) guasti.push('set ' + set + ' strato ' + k + ': arriva a ' + Math.round(fondo) + ' invece di ' + H);
+      });
+      if (!(gsS.bgLayers || []).length) guasti.push('set ' + set + ': nessuno strato disegnato');
+    });
+    if (!guasti.length) {
+      ok('gli sfondi coprono tutto lo schermo', '-', (window.BG_SETS || []).length + ' set controllati');
+    } else {
+      ko('gli sfondi coprono tutto lo schermo', '-', guasti.slice(0, 3).join(' | '));
+    }
+  }
+
+  // [58] CAMBIANDO GRADO NEL MENU, LO SFONDO CAMBIA SUBITO.
+  // ⚠️ Prima si aggiornava solo per effetto collaterale del cambio lingua, che ridisegna tutta la
+  // scena: chi sceglieva l'infezione vedeva il numero cambiare e l'ambiente restare quello di
+  // prima (segnalato dall'utente 2026-08-26). Il controllo preme la freccia e guarda la tinta.
+  {
+    window.Meta.forzaInfezione(window.CONFIG.INFEZIONE_MAX);
+    window.GameState.infezione = 0;
+    g.scene.start('MenuScene');
+    const ms = g.scene.getScene('MenuScene');
+    avanza(ms, 8);
+    const strato = (ms.bgLayers || [])[0];
+    const freccia = ms.children.list.find((o) => o.type === 'Text' && o.text === '>');
+    if (!strato || !freccia) {
+      ko('cambiando infezione lo sfondo risponde', '-',
+        'strato=' + !!strato + ' freccia=' + !!freccia + ' (selettore assente?)');
+    } else {
+      const prima = strato.s.tintTopLeft;
+      freccia.emit('pointerdown');
+      avanza(ms, 4);
+      const dopo = ((ms.bgLayers || [])[0] || strato).s.tintTopLeft;
+      if (window.GameState.infezione === 1 && prima !== dopo) {
+        ok('cambiando infezione lo sfondo risponde', '-',
+          'tinta dello strato lontano: 0x' + prima.toString(16) + ' -> 0x' + dopo.toString(16));
+      } else {
+        ko('cambiando infezione lo sfondo risponde', '-',
+          'grado=' + window.GameState.infezione + ' tinta ' + prima + ' -> ' + dopo);
+      }
+    }
+    window.GameState.infezione = 0;
+    g.scene.stop('MenuScene');
+  }
+
   // [42] L'ARCO DELLA BASTONATA E' UN QUARTO DI CERCHIO IN TUTTI E DUE I VERSI (2026-08-19).
   // Segnalato dal playtest: colpendo verso sinistra si disegnavano TRE QUARTI di cerchio attorno
   // al personaggio invece del quarto corrispondente al gesto. La causa: per specchiare l'arco gli

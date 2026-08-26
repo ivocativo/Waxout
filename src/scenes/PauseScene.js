@@ -27,8 +27,11 @@ class PauseScene extends Phaser.Scene {
       stroke: '#14161f', strokeThickness: 3,
     }).setOrigin(0.5);
 
-    // Quattro voci, non piu' tre: si e' ristretto il passo da 60 a 52 per farcele stare dentro al
-    // pannello senza allargarlo (i pulsanti restano alti 44, il pollice ci arriva lo stesso).
+    // Quattro voci, non piu' tre: si e' ristretto il passo per farcele stare dentro al pannello
+    // senza allargarlo (i pulsanti restano alti 42, il pollice ci arriva lo stesso).
+    // ⚠️ IL CONTO DEVE ARRIVARE FINO AI TASTI DELL'AUDIO, che stanno in fondo (H/2 + 170): con la
+    // quarta voce l'ultimo pulsante ci finiva SOPRA (segnalato dall'utente 2026-08-26). Le quattro
+    // voci occupano da H/2-34 a H/2+65, l'audio comincia a H/2+152: restano 87px di distanza.
     const voci = [
       [T.t('pause_resume'), () => this.resumeGame()],
       [T.t('pause_restart'), () => this.restartLevel()],
@@ -41,7 +44,7 @@ class PauseScene extends Phaser.Scene {
       [T.t('pause_menu'), () => this.toMenu()],
     ];
     voci.forEach(([testo, azione], i) => {
-      window.GameGfx.uiButton(this, W / 2, H / 2 - 26 + i * 52, testo, azione, { w: 250, h: 44, size: 17 });
+      window.GameGfx.uiButton(this, W / 2, H / 2 - 34 + i * 50, testo, azione, { w: 250, h: 42, size: 17 });
     });
 
     // SELETTORE LINGUA anche qui (richiesta dell'utente): chi si accorge a meta' run di voler
@@ -75,8 +78,8 @@ class PauseScene extends Phaser.Scene {
     }
 
     // Controlli audio: volume (cicla pieno/basso/muto) e musica on/off.
-    window.Sfx.addAudioButton(this, W / 2 - 26, H / 2 + 162);
-    window.Sfx.addMusicButton(this, W / 2 + 26, H / 2 + 162);
+    window.Sfx.addAudioButton(this, W / 2 - 26, H / 2 + 170);
+    window.Sfx.addMusicButton(this, W / 2 + 26, H / 2 + 170);
 
     // Scorciatoie da tastiera
     this.input.keyboard.on('keydown-ESC', () => this.resumeGame());

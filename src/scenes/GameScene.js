@@ -4008,9 +4008,18 @@ class GameScene extends Phaser.Scene {
   // quota di volo e ricomincia. Stati in e.diveState: hover|wind|dive|recover.
   flyAI(e, now) {
     const px = this.player.x, py = this.player.y;
+    // ⚠️ IL PAVIMENTO DEL MOSCERINO E' QUELLO LOCALE, non la linea piatta `groundTop`. I volanti
+    // non hanno gravita' e non passano dallo snap al terreno: erano le uniche tre righe di questa
+    // funzione a ragionare ancora sul vecchio pavimento piatto, e sopra una collina quella linea
+    // sta SOTTO la superficie — quindi il moscerino ci finiva dentro (segnalato dall'utente
+    // 2026-08-26: "le zanzare possono finire sotto terra").
+    const suolo = this.terrainTopAt(e.x);
+    // Rete di sicurezza, valida in QUALUNQUE stato: la picchiata mira dove sei ORA e tu puoi
+    // spostarti, quindi il bersaglio puo' ritrovarsi dentro una collina un attimo dopo.
+    if (e.y > suolo - 14) { e.y = suolo - 14; if (e.body.velocity.y > 0) e.setVelocityY(-40); }
     // Quota di volo tenuta SOTTO il soffitto locale (round 4) cosi' il moscerino non spinge
     // contro i collider del soffitto nei tratti bassi.
-    const hoverY = Phaser.Math.Clamp(py - 150, this.ceilingYAt(e.x) + 40, this.groundTop - 110);
+    const hoverY = Phaser.Math.Clamp(py - 150, this.ceilingYAt(e.x) + 40, suolo - 110);
 
     // CARICA: fermo a mezz'aria, lampeggia; poi parte la picchiata verso il bersaglio bloccato.
     if (e.diveState === 'wind') {
@@ -4030,7 +4039,7 @@ class GameScene extends Phaser.Scene {
 
     // PICCHIATA: prosegue dritta finché non arriva al bersaglio / tocca il basso / scade.
     if (e.diveState === 'dive') {
-      if (now >= e.diveTimer || e.y >= this.groundTop - 24 ||
+      if (now >= e.diveTimer || e.y >= suolo - 24 ||
           (Math.abs(e.x - e.diveTX) < 18 && Math.abs(e.y - e.diveTY) < 18)) {
         e.diveState = 'recover';
       }
