@@ -98,7 +98,12 @@ class MenuScene extends Phaser.Scene {
         fontFamily: 'monospace', fontSize: '18px', color: '#ff9a8a',
         stroke: '#14161f', strokeThickness: 3,
       }).setOrigin(0.5);
-      const refresh = () => label.setText(T.t('menu_infezione', { n: window.GameState.infezione }));
+      // Il nome della malattia accanto al numero: e' il tema che si sta per giocare (vedi
+      // GameGfx.TEMI). Un numero da solo non dice dove stai andando.
+      const refresh = () => label.setText(T.t('menu_infezione', {
+        n: window.GameState.infezione,
+        tema: T.t('tema_' + window.GameGfx.temaAttivo().id),
+      }));
       refresh();
       const arrow = (dx, chr) => {
         const a = this.add.text(W / 2 + dx, iy, chr, {

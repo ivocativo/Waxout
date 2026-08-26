@@ -45,6 +45,141 @@ window.GameGfx = {
     { role: 'near', y: -60, f: 0.40, scale: 1.32, depth: -13, alpha: 1.00, tint: 0xffffff },
   ],
 
+  // ================================ TEMI DELL'INFEZIONE ================================
+  // Ogni GRADO DI INFEZIONE e' una malattia diversa, con il suo ambiente (idea dell'utente,
+  // 2026-08-24). Non e' solo bellezza: salire di grado deve VEDERSI prima ancora di combattere.
+  //
+  // ⚠️ NIENTE FILE NUOVI, ed e' una scelta ragionata, non un ripiego. Un set di sfondo disegnato
+  // pesa 3,4 MB e l'app sta a 16: sei temi dedicati la raddoppierebbero. Qui invece si ricolora
+  // quello che c'e' gia' — strati di parallax, carne del terreno e del soffitto — e si aggiunge
+  // un'ATMOSFERA disegnata a codice, che e' la tecnica con cui il gioco ha gia' fatto la nebbia
+  // dell'assedio. Se un domani un tema meritera' arte sua, la si mette al posto della ricoloritura
+  // senza toccare nient'altro.
+  //
+  // ⚠️ LA REGOLA CHE DECIDE LE PALETTE: cerume e nemici sono AMBRA. Un fondale arancione acceso se
+  // li mangia (stessa lezione delle elite: e' il CONTRASTO a far leggere le cose, non il colore).
+  // Percio' la febbre e' rosso CUPO con le braci come unico accento caldo, e gli altri temi stanno
+  // tutti lontani dall'ambra: ciano, verde malato, viola, nero elettrico.
+  //
+  // ⚠️ La tinta di Phaser MOLTIPLICA: puo' spegnere e virare, mai schiarire. Dove serve calore o
+  // luce (febbre, acufene) si aggiunge un VELO in fusione additiva sopra al fondale — l'unica
+  // strada per aggiungere luce che nell'immagine non c'e'.
+  TEMI: [
+    { id: 'cerume', strati: [0xffffff, 0xefe2ea, 0xffffff],
+      carne: { profondo: 0x2b0f18, crosta: 0xc2455f, bordo: 0xe89aad },
+      velo: null, atmosfera: null },
+    { id: 'raffreddore', strati: [0x8fc8ee, 0x86b6d8, 0xa6dcf5],
+      carne: { profondo: 0x10222f, crosta: 0x3f7f9e, bordo: 0xa9dcef },
+      velo: { colore: 0x8fd8ff, alpha: 0.10 }, atmosfera: 'ghiaccio' },
+    { id: 'febbre', strati: [0xd2564a, 0xc04a44, 0xe0705a],
+      carne: { profondo: 0x2a0806, crosta: 0xb03028, bordo: 0xff9a6a },
+      velo: { colore: 0xff5a1e, alpha: 0.13 }, atmosfera: 'braci' },
+    // ⚠️ VERDE SPINTO, non oliva. Il primo tentativo (crosta 0x8f9a33) era troppo vicino
+    // all'ambra del cerume: a occhio si notava, e il controllo automatico lo ha misurato (102 su
+    // 120 di distanza minima). Con un pus piu' verde i cumuli tornano a staccare dal pavimento.
+    { id: 'otite', strati: [0xa9cf6a, 0x9abd63, 0xbcde88],
+      carne: { profondo: 0x16240f, crosta: 0x63a047, bordo: 0xbfe58a },
+      velo: null, atmosfera: 'bolle' },
+    { id: 'micosi', strati: [0x7a5cc4, 0x6a4fae, 0x9a7ae0],
+      carne: { profondo: 0x1a0f2c, crosta: 0x5b3f96, bordo: 0xc9a8ff },
+      velo: { colore: 0x8a5cff, alpha: 0.10 }, atmosfera: 'spore' },
+    { id: 'acufene', strati: [0x3a4a66, 0x33405a, 0x46587a],
+      carne: { profondo: 0x05070d, crosta: 0x1d2740, bordo: 0x5ff0ff },
+      velo: { colore: 0x00e5ff, alpha: 0.08 }, atmosfera: 'onde' },
+  ],
+
+  // Il tema di questa run. ⚠️ Legge il grado di infezione SCELTO, non il record: si guarda cio' che
+  // si sta giocando adesso.
+  temaAttivo() {
+    const g = (window.GameState && window.GameState.infezione) || 0;
+    return this.TEMI[Phaser.Math.Clamp(g, 0, this.TEMI.length - 1)] || this.TEMI[0];
+  },
+
+  // Va chiamata PRIMA di disegnare fondale e carne: e' lei a decidere di che colore saranno.
+  // ⚠️ `CARNE` viene proprio riscritta, invece di passare i colori a ogni funzione che disegna:
+  // le funzioni che la leggono sono quattro e sparse (terreno, soffitto, pedane, timpano), e
+  // aggiungere un parametro a tutte avrebbe dato quattro punti in cui dimenticarselo.
+  applicaTema(scene) {
+    const t = this.temaAttivo();
+    this.CARNE = t.carne;
+    scene._tema = t;
+  },
+
+  // Velo e atmosfera: si aggiungono DOPO il fondale, perche' ci stanno sopra.
+  vestiLaScena(scene) {
+    const t = scene._tema || this.temaAttivo();
+    const W = window.CONFIG.WIDTH, H = window.CONFIG.HEIGHT;
+    // VELO: l'unico modo di AGGIUNGERE luce a un'immagine che non ce l'ha (la tinta moltiplica).
+    // Sta sotto a terreno e soffitto (profondita' -12 contro 4): scalda il fondale, non il gioco.
+    if (t.velo) {
+      scene.add.rectangle(W / 2, H / 2, W, H, t.velo.colore, t.velo.alpha)
+        .setScrollFactor(0).setDepth(-12).setBlendMode(Phaser.BlendModes.ADD);
+    }
+    if (!t.atmosfera) { scene._atmo = null; return; }
+
+    // ATMOSFERA: una manciata di particelle riusate all'infinito. ⚠️ Fisse rispetto alla
+    // telecamera (scrollFactor 0) e poche decine: e' aria, non scenografia, e su un telefono
+    // qualche centinaio di oggetti in movimento si sentirebbe.
+    const N = 26;
+    const p = [];
+    for (let i = 0; i < N; i++) {
+      let o;
+      if (t.atmosfera === 'ghiaccio') {
+        o = scene.add.circle(0, 0, 1 + Math.random() * 2, 0xdff2ff, 0.85);
+      } else if (t.atmosfera === 'braci') {
+        o = scene.add.circle(0, 0, 1 + Math.random() * 2.2, Math.random() < 0.5 ? 0xff7a2a : 0xffc46a, 0.9);
+        o.setBlendMode(Phaser.BlendModes.ADD);
+      } else if (t.atmosfera === 'bolle') {
+        o = scene.add.circle(0, 0, 2 + Math.random() * 4, 0xdfe89a, 0.35);
+        o.setStrokeStyle(1, 0xf2f7c0, 0.7);
+      } else if (t.atmosfera === 'spore') {
+        o = scene.add.circle(0, 0, 1.5 + Math.random() * 2.5, 0xd9b3ff, 0.9);
+        o.setBlendMode(Phaser.BlendModes.ADD);
+      } else {                                   // 'onde' dell'acufene
+        o = scene.add.circle(0, 0, 10 + Math.random() * 26, 0x00e5ff, 0);
+        o.setStrokeStyle(1.5, 0x6ff2ff, 0.5);
+        o.setBlendMode(Phaser.BlendModes.ADD);
+      }
+      o.setScrollFactor(0).setDepth(-11);
+      o._x = Math.random(); o._y = Math.random();
+      o._v = 0.05 + Math.random() * 0.22;
+      o._fase = Math.random() * Math.PI * 2;
+      p.push(o);
+    }
+    scene._atmo = { tipo: t.atmosfera, p, t: 0 };
+  },
+
+  // Un fotogramma d'aria. La chiama updateBackground, che gira gia' a ogni fotogramma.
+  aggiornaAtmosfera(scene, dt) {
+    const a = scene._atmo;
+    if (!a) return;
+    const W = window.CONFIG.WIDTH, H = window.CONFIG.HEIGHT;
+    const s = dt / 1000;
+    a.t += s;
+    a.p.forEach((o) => {
+      if (a.tipo === 'ghiaccio') {               // fiocchi che scendono ondeggiando
+        o._y += o._v * s * 0.5;
+        if (o._y > 1.05) { o._y = -0.05; o._x = Math.random(); }
+        o.setPosition(o._x * W + Math.sin(a.t * 0.8 + o._fase) * 22, o._y * H);
+      } else if (a.tipo === 'braci' || a.tipo === 'spore') {   // salgono, piano
+        o._y -= o._v * s * 0.55;
+        if (o._y < -0.05) { o._y = 1.05; o._x = Math.random(); }
+        o.setPosition(o._x * W + Math.sin(a.t * 1.3 + o._fase) * 16, o._y * H);
+        o.setAlpha(0.35 + 0.5 * (0.5 + 0.5 * Math.sin(a.t * 2 + o._fase)));   // pulsano
+      } else if (a.tipo === 'bolle') {           // salgono e scoppiano in alto
+        o._y -= o._v * s * 0.4;
+        if (o._y < -0.05) { o._y = 1.05; o._x = Math.random(); o.setScale(1); }
+        o.setPosition(o._x * W + Math.sin(a.t * 0.6 + o._fase) * 10, o._y * H);
+        o.setScale(1 + Math.sin(a.t * 1.6 + o._fase) * 0.18);
+      } else {                                   // 'onde': anelli che si allargano e svaniscono
+        const q = (a.t * 0.35 + o._fase) % 1;    // 0 -> 1, poi ricomincia
+        o.setPosition(o._x * W, o._y * H);
+        o.setScale(0.3 + q * 1.9);
+        o.setAlpha((1 - q) * 0.45);
+      }
+    });
+  },
+
   // ---------- MASSA ORGANICA (terreno e soffitto) ----------
   // Terreno e soffitto erano due lastroni di colore piatto marrone: con lo sfondo pittorico
   // dietro erano diventati la cosa piu' fuori posto dell'inquadratura. Qui vengono disegnati
@@ -439,9 +574,13 @@ window.GameGfx = {
           .setOrigin(0, 0).setScrollFactor(0).setDepth(L.depth);
         ts.tileScaleX = L.scale; ts.tileScaleY = L.scale;
         if (L.alpha != null) ts.setAlpha(L.alpha);
-        if (L.tint && L.tint !== 0xffffff) ts.setTint(L.tint);
+        // La tinta viene dal TEMA della run (vedi TEMI): quella scritta in BG_LAYERS resta come
+        // ripiego per le schermate che non hanno un grado di infezione da mostrare.
+        const tinta = (this.temaAttivo().strati || [])[i] || L.tint;
+        if (tinta && tinta !== 0xffffff) ts.setTint(tinta);
         return { s: ts, f: L.f };
       });
+      this.vestiLaScena(scene);
       this.updateBackground(scene);
       return;
     }
@@ -467,12 +606,14 @@ window.GameGfx = {
     bg.tilePositionY = scene.bgBaseY;
 
     scene.bgLayers = [{ s: bg, f: 0.25 }];        // parallax lento
+    this.vestiLaScena(scene);
     this.updateBackground(scene);
   },
 
   // Scorre il fondale in base alla telecamera (effetto parallax), partendo dal settore
   // scelto per il livello (scene.bgBaseX).
   updateBackground(scene) {
+    this.aggiornaAtmosfera(scene, scene.game.loop.delta || 16.7);
     if (!scene.bgLayers) return;
     const sx = scene.cameras.main.scrollX;
     for (let i = 0; i < scene.bgLayers.length; i++) {

@@ -31,6 +31,26 @@ RADICE = Path(__file__).resolve().parent.parent
 FOTOGRAMMI_GIF = 26        # quanti scatti compongono l'animazione
 PAUSA_GIF = 110            # ms fra uno scatto e l'altro (e durata di ogni fotogramma)
 
+def _tema(grado):
+    """JavaScript che avvia un livello al grado di infezione dato, con qualche nemico in campo."""
+    return """
+        const g = window.game, G = window.GameState;
+        G.reset(); G.level = 3; G.infezione = %d;
+        G.prossimoLivello = { kind: 'rush', mutator: null, waxMult: 1 };
+        g.scene.start('GameScene');
+        await new Promise(r => setTimeout(r, 1500));
+        const s = g.scene.getScene('GameScene');
+        window.Taratura && window.Taratura.setGodmode(true);
+        for (let i = 0; i < 3; i++) {
+          const e = s.spawnEnemy(i === 0 ? 'crust' : 'blob', { x: s.player.x + 170 + i * 110 });
+          if (e) { e.spawning = false; e.setVisible(true); e.setAlpha(1); }
+        }
+        let t = g.loop.time;
+        for (let i = 0; i < 40; i++) { t += 16.6; g.loop.step(t); }
+        if (!window.__fotoGif) g.scene.pause('GameScene');
+    """ % grado
+
+
 def _leggendario(nome):
     """JavaScript che mette in campo un leggendario e lo lancia, per fotografarlo."""
     return """
@@ -85,6 +105,13 @@ SCENE = {
     "trapano": _leggendario("trapano"),
     "razzo": _leggendario("razzo"),
     "granata": _leggendario("granata"),
+    # Un tema dell'infezione in gioco. Serve a controllare due cose che si giudicano solo a
+    # occhio: che l'ambiente si riconosca, e che cerume e nemici RESTINO LEGGIBILI sopra.
+    "tema0": _tema(0), "tema1": _tema(1), "tema2": _tema(2),
+    "tema3": _tema(3), "tema4": _tema(4), "tema5": _tema(5),
+    # Confronto fra i due set di sfondo: stesso tema, livelli diversi (il set cambia ogni 5).
+    "set1": _tema(0).replace("G.level = 3", "G.level = 3"),
+    "set2": _tema(0).replace("G.level = 3", "G.level = 6"),
     # Il menu principale cosi' com'e'.
     "menu": """
         const g = window.game;

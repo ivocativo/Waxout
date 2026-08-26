@@ -28,6 +28,74 @@ la riga **nemici in campo**, che e' l'unica leva che nessun arrotondamento puo' 
 la carta `dmg` del negozio (che sul getto vale META' che sulla mazza) e con l'**Ugello Potenziato**,
 lo sblocco dedicato ai colpi a distanza nato proprio da questa tabella.
 
+## H.9 — UN TEMA PER OGNI GRADO DI INFEZIONE ✅ FASE 1 FATTA (2026-08-24)
+Idea dell'utente: ogni grado di infezione ha la sua **malattia**, con ambiente suo. Due gia'
+scelti da lui: **raffreddore = ghiaccio**, **febbre = fuoco**.
+
+**I sei temi, approvati dall'utente e IN GIOCO** (nomi da malattie vere dell'orecchio, cosi' il
+gioco resta coerente col suo scherzo). Stanno in `GameGfx.TEMI`; il nome compare accanto al grado
+nel menu, perche' "Infezione 4" e' un numero mentre "Micosi" e' un posto dove stai andando:
+
+| grado | tema | palette | dettaglio-firma (via codice) |
+|---|---|---|---|
+| 0 | **cerume** (com'e' oggi) | ambra / rosa carne | gocce di cerume |
+| 1 | **raffreddore** | ciano, azzurro slavato | stalattiti di muco, fiato che condensa |
+| 2 | **febbre** | rosso cupo, braci | onde di calore, braci che salgono |
+| 3 | **otite** (pus) | verde-giallo malato | bolle che scoppiano, colature dense |
+| 4 | **micosi** (funghi nell'orecchio) | viola fosforescente su buio | funghi luminosi, spore |
+| 5 | **acufene** | nero con neon elettrico | onde sonore che pulsano, scariche |
+
+⚠️ **IL VINCOLO CHE DECIDE LA PALETTE: cerume e nemici sono AMBRA.** Un fondale arancione acceso
+se li mangia. La febbre percio' va tenuta sul rosso CUPO con le braci come unico accento caldo —
+non un incendio arancione. Ghiaccio, pus, funghi e acufene sono al sicuro: i loro colori stanno
+lontani dall'ambra.
+
+⚠️ **IL VINCOLO CHE DECIDE IL METODO: peso.** Un set di sfondo misura **3,4 MB** (mid.png da solo
+2,4 MB) e l'APK oggi sta a 16 MB. Sei set dedicati = **+17 MB, l'app quasi raddoppia**.
+**Percio' due fasi:**
+ 1. ✅ **FATTA: palette + atmosfera via codice, zero file nuovi.** Ogni tema ricolora gli strati di
+    parallax E la carne di terreno/soffitto/pedane (`GameGfx.CARNE`, riscritta da `applicaTema`),
+    piu' un'atmosfera propria: fiocchi, braci, bolle, spore, anelli sonori.
+    ⚠️ La tinta MOLTIPLICA: puo' spegnere e virare, mai schiarire. Dove serve luce (febbre,
+    acufene) c'e' un VELO in fusione additiva sopra al fondale — l'unico modo di aggiungere una
+    luce che nell'immagine non c'e'.
+    ⚠️ `applicaTema` va chiamata PRIMA di disegnare: decide anche i colori della carne, che
+    dipinge un'altra funzione piu' avanti nella costruzione del livello.
+ 2. **Arte dedicata solo dove serve davvero**, uno o due temi. Da valutare dopo averli giocati:
+    la ricoloritura potrebbe bastare per quasi tutti.
+
+✅ **DUE SET DI SFONDO NUOVI (2026-08-24).** Generati dall'utente e montati: `BG_SETS = [1, 2, 3]`,
+cioe' **tre ambienti diversi in una run da 15 livelli**, uno ogni cinque, senza ripetizioni. Prima
+ce n'era uno solo per tutti e quindici.
+La lavorazione ora e' in tre comandi, e i due nuovi strumenti nascono da due difetti misurati:
+```
+python tools\prepara_sfondo.py <N>
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\bake_background_set.ps1 -Set <N> -Width <W>
+python tools\rifinisci_sfondo.py <N>
+```
+ - ⚠️ **I generatori consegnano immagini piu' scure ai BORDI** (misurato: dal +24% al +57%). In una
+   illustrazione e' bello; in uno sfondo che scorre e si ripete e' una banda scura che ripassa a
+   ogni giro — e lo specchio anti-giuntura appiccica i due bordi scuri, raddoppiandola.
+   `prepara_sfondo.py` misura la luminosita' colonna per colonna e la riporta piatta, **escludendo
+   il magenta dal conto** (se no correggerebbe al contrario proprio dove ci sono i buchi).
+ - ⚠️ **Scontornare lascia sempre una FRANGIA MAGENTA** sul bordo (misurata: 1-2% dei pixel
+   visibili, ben visibile a schermo). `rifinisci_sfondo.py` erode il contorno di due pixel e fa il
+   despill su quel che resta: da 67.184 pixel sporchi a **zero**. ⚠️ Il despill scatta solo se
+   rosso E blu stanno tutti e due sopra il verde: l'arte e' rosa e malva, una regola piu' larga la
+   scolorirebbe invece di pulirla.
+ - ⚠️ **Peso: tavolozza a 256 colori** sugli strati trasparenti, che li porta a **un quinto** senza
+   differenza visibile. Un set costa cosi' 1-2 MB invece di 3,4: e' cio' che rende sostenibile
+   avere quattro ambienti in un'app da 16 MB.
+ - ⚠️ **La misura di cottura va scelta guardando l'ALTEZZA**, non la larghezza: gli strati hanno
+   proporzioni diverse fra loro e con `-Width` troppo basso il fondale non copre lo schermo.
+⚠️ Da fare comunque: oggi `BG_SETS = [2]`, cioe' **un solo set per tutti e 15 i livelli**. La
+varieta' dentro la run non esiste ancora, e non e' un problema di temi ma di quel numero.
+
+**NOTA PER DOPO (chiesta dall'utente):** una volta sistemati gli sfondi, i gradi di infezione
+dovranno differire anche nel **gameplay**, non solo nell'aspetto. Spunti che nascono dai temi
+stessi: ghiaccio = terreno scivoloso, fuoco = zone che scottano, pus = pozze che rallentano,
+funghi = spore che intossicano, acufene = disturbo visivo/sonoro a ondate. Da progettare a parte.
+
 ## H.7 — ASSEDIO: COSTRINGERE A MUOVERSI ✅ FATTO (2026-08-23)
 Segnalato dai tester: nell'ASSEDIO conviene piantarsi in un punto e aspettare che i nemici
 arrivino. Il modo migliore di giocarlo e' anche il piu' noioso, che e' il difetto peggiore che

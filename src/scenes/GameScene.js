@@ -183,6 +183,11 @@ class GameScene extends Phaser.Scene {
     // costruire il livello (pedane/stalattiti/gocce si agganciano al soffitto locale via ceilingYAt).
     this.buildCeilingProfile();
 
+    // TEMA DELLA RUN (grado di infezione): decide i colori del fondale E della carne di terreno e
+    // soffitto, quindi va PRIMA di disegnarli. Chiamato qui e non dentro drawBackground perche' la
+    // carne la dipinge tutta un'altra funzione, piu' avanti.
+    window.GameGfx.applicaTema(this);
+
     this.drawBackground();
 
     // Il PAVIMENTO (terreno) vero lo disegna `buildTerrain()` seguendo il profilo `terrainTopAt`

@@ -2027,6 +2027,50 @@ window.__earwaxChecks = function (opts) {
     g.scene.stop('MenuScene');
   }
 
+  // [56] OGNI GRADO DI INFEZIONE HA IL SUO TEMA, E I TEMI SONO DAVVERO DIVERSI.
+  // ⚠️ Due difetti possibili, tutti e due silenziosi: (a) un tema senza nome tradotto o senza
+  // palette — il grado si gioca lo stesso e nessuno se ne accorge finche' un giocatore non ci
+  // arriva; (b) due gradi che finiscono per assomigliarsi, che e' peggio, perche' l'intero senso
+  // del meccanismo e' che salire di grado SI VEDA. Qui si confrontano i colori uno per uno.
+  {
+    const T = window.I18n, G = window.GameGfx;
+    const guasti = [];
+    const visti = {};
+    G.TEMI.forEach((tema, grado) => {
+      if (T.t('tema_' + tema.id) === 'tema_' + tema.id) guasti.push(tema.id + ': manca il nome');
+      if (!tema.carne || !tema.strati || tema.strati.length !== G.BG_LAYERS.length) {
+        guasti.push(tema.id + ': palette incompleta');
+        return;
+      }
+      // "Impronta" del tema: le tinte degli strati piu' i colori della carne. Due temi non possono
+      // averla identica.
+      const impronta = tema.strati.concat([tema.carne.profondo, tema.carne.crosta, tema.carne.bordo]).join(',');
+      if (visti[impronta] !== undefined) guasti.push(tema.id + ' e ' + visti[impronta] + ': stessi colori');
+      visti[impronta] = tema.id;
+      // La carne deve stare LONTANA dall'ambra del cerume (0xe0a83a): se ci si avvicina, cumuli e
+      // nemici spariscono nel fondo. Si misura la distanza fra i colori, canale per canale.
+      const amb = { r: 0xe0, g: 0xa8, b: 0x3a };
+      const c = tema.carne.crosta;
+      const d = Math.abs(((c >> 16) & 255) - amb.r) + Math.abs(((c >> 8) & 255) - amb.g)
+        + Math.abs((c & 255) - amb.b);
+      if (d < 120) guasti.push(tema.id + ': la carne e troppo vicina al colore del cerume (' + d + ')');
+    });
+    // E il tema deve seguire il grado scelto, non restare quello di prima.
+    const prima = window.GameState.infezione;
+    window.GameState.infezione = 0;
+    const t0 = G.temaAttivo().id;
+    window.GameState.infezione = window.CONFIG.INFEZIONE_MAX;
+    const tMax = G.temaAttivo().id;
+    window.GameState.infezione = prima;
+    if (t0 === tMax) guasti.push('il tema non cambia col grado di infezione');
+    if (!guasti.length) {
+      ok('ogni grado di infezione ha il suo tema', '-',
+        G.TEMI.length + ' temi distinti: ' + G.TEMI.map((t) => T.t('tema_' + t.id)).join(', '));
+    } else {
+      ko('ogni grado di infezione ha il suo tema', '-', guasti.join(' | '));
+    }
+  }
+
   // [42] L'ARCO DELLA BASTONATA E' UN QUARTO DI CERCHIO IN TUTTI E DUE I VERSI (2026-08-19).
   // Segnalato dal playtest: colpendo verso sinistra si disegnavano TRE QUARTI di cerchio attorno
   // al personaggio invece del quarto corrispondente al gesto. La causa: per specchiare l'arco gli

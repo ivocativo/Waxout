@@ -36,9 +36,8 @@ package-lock.json
 # NON serve al gioco: l'upscale e' stato ABBANDONATO, gli sfondi si generano gia' grandi.
 chainner/
 
-# Primo tentativo di sfondo a strati (35MB): layer ricavati tagliando una sola immagine e poi
-# upscalati -> avevano solo 139-250px di altezza vera, inutilizzabili. Sostituiti dal set 2.
-assets/backgrounds/1/
+# (La cartella 1 conteneva il primo tentativo INGRANDITO, provato e riscartato due volte. Ora
+# contiene arte nuova, generata come si deve: non e' piu' materiale da escludere.)
 
 # Registrazioni schermo occasionali
 *.mp4

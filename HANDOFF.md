@@ -482,7 +482,11 @@ appena spawnato) → filtrare per `x.kind`/`x.swarmling`/`x.fugitive` o distrugg
   in `GameGfx.BG_LAYERS` (y, velocita', scala, opacita', tinta: il lontano smorzato e il vicino a
   colori pieni = prospettiva atmosferica). **Per aggiungere set c'e' una procedura pronta in
   memoria (`earwaxwar-background-pipeline`): basta che l'utente dica "voglio altri sfondi".**
-  Pipeline in `tools/bake_background_set.ps1` (ridimensiona, scontorna il magenta, specchia).
+  Pipeline in TRE comandi: `tools/prepara_sfondo.py` (spiana i bordi scuri) ->
+  `tools/bake_background_set.ps1` (ridimensiona, scontorna il magenta, specchia) ->
+  `tools/rifinisci_sfondo.py` (toglie la frangia magenta e porta il peso a un quinto).
+  **Dal 2026-08-24 i set sono TRE** (`BG_SETS = [1, 2, 3]`): tre ambienti in una run da 15
+  livelli, uno ogni cinque. Motivi e trappole dei due strumenti nuovi in `ROADMAP.md` §H.9.
 - **Leggendari (dal 2026-08-19, completati il 2026-08-23):** cinque poteri carissimi in negozio,
   ognuno chiuso dietro un grado di infezione da SUPERARE (`window.LEGGENDARI` in state.js):
   bomba (0), granate (1), laser (2), trapano (3), razzo (4).
