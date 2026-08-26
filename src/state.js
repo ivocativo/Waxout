@@ -203,14 +203,26 @@ window.CONFIG = {
     // ⚠️ E c'e' un secondo motivo, ancora piu' scomodo: i MODIFICATORI del livello ballano molto
     // di piu' (vetro x0,45, corazza x1,7). Con passi piccoli il grado di infezione era rumore di
     // fondo dentro una variazione tre volte piu' grande.
-    enemyHp:   0.30,   // +30% vita nemici per grado (grado 5 = x2,5)
-    enemySpeed: 0.07,  // +7% velocita' per grado
+    // ⚠️ LA VITA CRESCE A COMPOSTO (x1,45 per grado), non a somma. Cambiato il 2026-08-26 dopo
+    // una segnalazione precisa dell'utente: "a infezione 5 col personaggio potenziato al massimo
+    // e' troppo facile". Misurato, aveva ragione da vendere — il getto al massimo fa 135 di danno
+    // e un cerumino al grado 5 ne aveva 156: moriva in due colpi, la zanzara in uno.
+    // Il motivo e' la FORMA della crescita, non il numero: i potenziamenti del giocatore
+    // aggiungono danno a scatti FISSI (fino a 135), mentre la vita saliva di una percentuale su
+    // una base piccola. Una somma non recupera mai quel distacco; un composto si'.
+    // Ed e' anche piu' giusto: al grado 1 vale x1,45 (un gradino gentile, per chi ci arriva
+    // appena), al grado 5 vale x6,4 (un muro, per chi ha gia' comprato tutto).
+    enemyHpPasso: 1.45,
+    enemySpeed: 0.10,  // +10% velocita' per grado (grado 5 = +50%)
     enemyDmg:  0.15,   // +15% danno per grado (grado 5 = x1,75)
-    waxReward: 0.20,   // +20% cerume per grado (l'incentivo a salire)
-    // NEMICI IN PIU' IN CAMPO: uno ogni QUESTI gradi. ⚠️ E' l'unica leva immune agli
-    // arrotondamenti: quanti nemici ti trovi addosso si vede a colpo d'occhio, mentre "questo
-    // cerumino ha il 30% di vita in piu'" si puo' solo dedurre contando i colpi.
-    enemyPerGradi: 2,
+    waxReward: 0.30,   // +30% cerume per grado: se il muro sale, deve salire anche il premio
+    // NEMICI IN PIU' IN CAMPO: uno ogni QUESTI gradi (dal 2026-08-26: uno per grado). ⚠️ E' l'unica
+    // leva immune agli arrotondamenti: quanti nemici ti trovi addosso si vede a colpo d'occhio,
+    // mentre "questo cerumino ha il 30% di vita in piu'" si puo' solo dedurre contando i colpi.
+    enemyPerGradi: 1,
+    // E arrivano anche piu' FITTI: -7% di attesa fra una comparsa e l'altra per grado. Un nemico
+    // piu' duro da solo si aggira; sei nemici duri che si rinnovano in fretta no.
+    spawnPiuFitto: 0.07,
   },
 
   // Palette a tema "orecchio / cerume / sporco"

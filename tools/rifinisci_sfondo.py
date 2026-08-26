@@ -43,16 +43,25 @@ def rifinisci(f):
     im = Image.open(f).convert("RGBA")
     prima = np.asarray(im, dtype=np.int16)
     r0, g0, b0, a0 = prima[:, :, 0], prima[:, :, 1], prima[:, :, 2], prima[:, :, 3]
-    sporchi_prima = int((((a0 > 10) & (r0 - g0 > SOGLIA) & (b0 - g0 > SOGLIA))).sum())
+    vuoto0 = Image.fromarray(((a0 < 10) * 255).astype(np.uint8))
+    bordo0 = np.asarray(vuoto0.filter(ImageFilter.MaxFilter(7))) > 0
+    sporchi_prima = int((((a0 > 10) & bordo0 & (r0 - g0 > SOGLIA) & (b0 - g0 > SOGLIA))).sum())
 
     # 1a — erosione dell'alpha: il minimo su una finestra 5x5 spegne i bordi
     alpha = im.getchannel("A").filter(ImageFilter.MinFilter(EROSIONE))
     im.putalpha(alpha)
 
-    # 1b — despill su quel che resta
+    # 1b — despill su quel che resta, SOLO LUNGO IL BORDO.
+    # ⚠️ La condizione sul colore da sola NON BASTA, e crederlo e' costato un giro: ravvivando
+    # l'arte (armonizza_sfondo.py) la pittura rosa comincia a soddisfarla, e il despill si e'
+    # mangiato 1,3 MILIONI di pixel di disegno invece dei pochi del contorno. La frangia vive
+    # attaccata alla trasparenza: si guarda li' e basta.
+    alpha_np = np.asarray(alpha)
+    trasparente = Image.fromarray(((alpha_np < 10) * 255).astype(np.uint8))
+    vicino_al_vuoto = np.asarray(trasparente.filter(ImageFilter.MaxFilter(7))) > 0
     a = np.asarray(im, dtype=np.int16)
     r, g, b, al = a[:, :, 0], a[:, :, 1], a[:, :, 2], a[:, :, 3]
-    frangia = (al > 10) & (r - g > SOGLIA) & (b - g > SOGLIA)
+    frangia = (al > 10) & vicino_al_vuoto & (r - g > SOGLIA) & (b - g > SOGLIA)
     tetto = g + SOGLIA
     a[:, :, 0] = np.where(frangia, np.minimum(r, tetto), r)
     a[:, :, 2] = np.where(frangia, np.minimum(b, tetto), b)
@@ -60,7 +69,9 @@ def rifinisci(f):
 
     dopo = np.asarray(pulita, dtype=np.int16)
     r1, g1, b1, a1 = dopo[:, :, 0], dopo[:, :, 1], dopo[:, :, 2], dopo[:, :, 3]
-    sporchi_dopo = int((((a1 > 10) & (r1 - g1 > SOGLIA) & (b1 - g1 > SOGLIA))).sum())
+    vuoto1 = Image.fromarray(((a1 < 10) * 255).astype(np.uint8))
+    bordo1 = np.asarray(vuoto1.filter(ImageFilter.MaxFilter(7))) > 0
+    sporchi_dopo = int((((a1 > 10) & bordo1 & (r1 - g1 > SOGLIA) & (b1 - g1 > SOGLIA))).sum())
 
     peso_prima = f.stat().st_size
     pulita.quantize(colors=COLORI, method=Image.FASTOCTREE).save(f, optimize=True)

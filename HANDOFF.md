@@ -897,10 +897,20 @@ Non si sentiva lo stesso, per tre motivi che vale la pena ricordare tutti e tre:
     e un livello "vetro" al grado 5 aveva nemici piu' fragili di uno senza modificatore al grado 0.
  3. restano attive a ogni grado le tre manopole che ammorbidiscono il gioco (`VITA_NEMICI` 0,8,
     `DANNO_NEMICI` 0,7, `DANNO_PG` 1,5).
-**Rimedio:** passo per grado alzato (vita 0,15 -> 0,30, danno 0,10 -> 0,15) **e un nemico in piu'
-in campo ogni due gradi**. La seconda leva e' quella che conta di piu': il numero di nemici che ti
-si para davanti e' l'unica cosa **immune agli arrotondamenti**, si vede a colpo d'occhio senza
-contare niente. Quando un aumento "non si sente", chiedersi sempre se sta cadendo dentro un
+**Rimedio in due giri.** Primo: passo per grado alzato (vita 0,15 -> 0,30) e un nemico in piu' ogni
+due gradi. Secondo (2026-08-26, dopo che l'utente ha rigiocato COL NEGOZIO FINITO): **la vita passa
+da somma a COMPOSTO**, x1,45 per grado. La segnalazione era "a infezione 5 col personaggio al
+massimo e' troppo facile", e la misura le ha dato ragione — getto al massimo 135 di danno contro un
+cerumino da 156 punti vita: due colpi, la zanzara uno.
+⚠️ **E' UNA QUESTIONE DI FORMA, NON DI NUMERO.** I potenziamenti del giocatore aggiungono danno a
+scatti FISSI; una vita che cresce di una percentuale su una base piccola non recupera mai quel
+distacco, per quanto si alzi il coefficiente — alzarlo abbastanza da mordere in cima avrebbe reso
+proibitivo il grado 1. Il composto e' l'unica forma che fa le due cose insieme: gradino gentile in
+basso (x1,45), muro in cima (x6,4).
+Insieme: +10% velocita' per grado, **un nemico in piu' per grado** e comparse **piu' fitte del 7%
+per grado**.
+Il numero di nemici resta la leva che si sente di piu': quanti te ne trovi davanti e'
+l'unica cosa **immune agli arrotondamenti**, si vede a colpo d'occhio senza contare niente. Quando un aumento "non si sente", chiedersi sempre se sta cadendo dentro un
 arrotondamento — e in quel caso cercare una leva che non si possa arrotondare.
 
 ## RISCHI / punti aperti da tenere d'occhio

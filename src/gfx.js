@@ -94,7 +94,13 @@ window.GameGfx = {
   // viene riportato nella stessa famiglia, senza rigenerare l'arte.
   // ⚠️ Si moltiplica, quindi si puo' solo TOGLIERE: per andare verso il rosa si abbassano verde e
   // blu, non si alza il rosso. Ecco perche' i valori partono tutti da 0xff sul rosso.
-  SET_TINTE: { 1: 0xffb0c4, 3: 0xffb4c8 },
+  // ⚠️ VUOTA, E DEVE RESTARLO finche' i set sono in famiglia. Ci si era messa una tinta rosa per
+  // ravvivare i set 1 e 3, ma la tinta MOLTIPLICA: li rendeva piu' rosa e piu' SCURI, mentre il
+  // problema era che nascono smorti (saturazione 0,31 e 0,20 contro lo 0,60 del set 2). La
+  // saturazione si alza solo toccando l'immagine, e ora la porta l'arte stessa
+  // (`tools/armonizza_sfondo.py`). Lasciare qui anche una tinta correggerebbe due volte.
+  // Resta come manopola se un set futuro arrivasse fuori famiglia e non si volesse ricuocerlo.
+  SET_TINTE: {},
 
   // Fonde due tinte canale per canale (tema x set): moltiplicare due tinte equivale a passarle
   // una dopo l'altra, ed e' l'unico modo di tenerle indipendenti.

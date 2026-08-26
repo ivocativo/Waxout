@@ -10,13 +10,22 @@ rialzo dei gradi di infezione; si rigenera con `python tools	abella_colpi.py`.
 
 | nemico | inf.0 | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|---|
-| pulce | 1 | 2 | 2 | 2 | 2 | 2 |
-| cerumino | 2 | 3 | 3 | 4 | 4 | 5 |
-| moscerino | 2 | 2 | 3 | 3 | 3 | 4 |
-| gorgogliante | 3 | 4 | 4 | 5 | 6 | 6 |
-| saltatore | 3 | 4 | 5 | 6 | 7 | 8 |
-| crosta | 4 | 6 | 7 | 8 | 9 | 10 |
-| _nemici in campo_ | 3 | 3 | 4 | 4 | 5 | 5 |
+| pulce | 1 | 2 | 2 | 3 | 4 | 6 |
+| cerumino | 2 | 3 | 4 | 6 | 8 | 11 |
+| moscerino | 2 | 2 | 3 | 4 | 6 | 9 |
+| gorgogliante | 3 | 4 | 5 | 8 | 11 | 15 |
+| saltatore | 3 | 5 | 6 | 9 | 13 | 19 |
+| crosta | 4 | 6 | 9 | 12 | 18 | 25 |
+| _nemici in campo_ | 3 | 4 | 5 | 6 | 7 | 8 |
+
+⚠️ **E LA VITA CRESCE A COMPOSTO (x1,45 per grado), dal 2026-08-26.** Con la somma, un giocatore
+COL NEGOZIO FINITO trovava il grado 5 facile: misurato, il getto al massimo fa 135 di danno e un
+cerumino al grado 5 ne aveva 156 — due colpi, e la zanzara uno solo. Il motivo e' la FORMA della
+crescita, non il numero: i potenziamenti aggiungono danno a scatti FISSI, la vita saliva di una
+percentuale su una base piccola, e una somma non recupera mai quel distacco. Col composto il
+grado 1 resta un gradino gentile (x1,45) e il grado 5 diventa un muro (x6,4) — che e' esattamente
+la promessa del meccanismo. Insieme: +10% velocita' per grado, **un nemico in piu' per grado** e
+comparse **piu' fitte del 7% per grado**.
 
 ⚠️ **MISURARE I COLPI, NON LA VITA.** Con i primi fattori (+15% vita per grado) questa tabella era
 quasi PIATTA — il cerumino faceva 2 colpi al grado 0 e 3 al grado 5 — ed e' esattamente cio' che

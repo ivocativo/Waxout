@@ -507,7 +507,11 @@ window.__earwaxChecks = function (opts) {
     const g3 = factorAt(3);
     const vicino = (a, b) => Math.abs(a - b) < 0.001;
     const baseOk = vicino(base.hp, 1) && vicino(base.wax, 1);   // grado 0 = nessun effetto
-    const hpOk = vicino(g3.hp, 1 + F.enemyHp * 3);
+    // ⚠️ La VITA cresce a COMPOSTO (2026-08-26), le altre tre a somma: sono forme diverse
+    // apposta, e questo controllo e' l'unico posto che se ne accorgerebbe se qualcuno le
+    // riallineasse per sbaglio. Il valore atteso si ricalcola dalla configurazione, cosi' una
+    // taratura futura non lo fa diventare rosso per niente.
+    const hpOk = vicino(g3.hp, Math.pow(F.enemyHpPasso, 3));
     const dmgOk = vicino(g3.dmg, 1 + F.enemyDmg * 3);
     const speedOk = vicino(g3.speed, 1 + F.enemySpeed * 3);
     const waxOk = vicino(g3.wax, 1 + F.waxReward * 3);

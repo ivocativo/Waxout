@@ -578,6 +578,15 @@ class GameScene extends Phaser.Scene {
       this._nasciteIniziali = null;
     });
 
+    // INFEZIONE: i nemici arrivano anche piu' FITTI, non solo piu' duri e piu' numerosi. Uno
+    // spesso e resistente si aggira; un flusso che non da' tregua no. ⚠️ Con un pavimento: sotto
+    // i 600ms si accavallerebbero addosso al giocatore appena nato.
+    const gradoInfSpawn = window.GameState.infezione || 0;
+    const fitto = window.CONFIG.INFEZIONE.spawnPiuFitto || 0;
+    if (gradoInfSpawn > 0 && fitto > 0) {
+      spawnDelay = Math.max(600, Math.round(spawnDelay * (1 - fitto * gradoInfSpawn)));
+    }
+
     this.spawnTimer = this.time.addEvent({
       delay: spawnDelay, loop: true,
       // Il controllo sull'orario si fa QUI dentro e non con `startAt` negativo: quello dipende
@@ -719,7 +728,7 @@ class GameScene extends Phaser.Scene {
     const g = window.GameState.infezione || 0;
     const F = window.CONFIG.INFEZIONE;
     if (g > 0) {
-      this.mutEnemyHp = (this.mutEnemyHp || 1) * (1 + F.enemyHp * g);
+      this.mutEnemyHp = (this.mutEnemyHp || 1) * Math.pow(F.enemyHpPasso, g);
       this.mutEnemySpeed = (this.mutEnemySpeed || 1) * (1 + F.enemySpeed * g);
       this.mutEnemyDmg = (this.mutEnemyDmg || 1) * (1 + F.enemyDmg * g);
       this.mutWaxMult = (this.mutWaxMult || 1) * (1 + F.waxReward * g);
