@@ -59,3 +59,16 @@ assets/backgrounds/*/*
 !assets/backgrounds/*/bg*_far.jpg
 !assets/backgrounds/*/bg*_mid.png
 !assets/backgrounds/*/bg*_near.png
+
+# SORGENTI DI LAVORAZIONE DENTRO assets/ — 52 MB che non servono a nessuno se non a chi ricuoce.
+# ⚠️ E' la regola gia' scritta per gli sprite e per gli sfondi ("in assets/ solo i file cotti"),
+# che per i fogli del personaggio e per le protuberanze non era mai stata applicata: i disegni
+# originali, le pose scartate e le cartelle "da_modificare" erano tracciati insieme al gioco.
+# Nell'APK non finivano (il workflow copia un elenco preciso), ma se li portava dietro chiunque
+# clonasse il repository. Restano sul disco di chi lavora.
+assets/spritesheets/hero/*/
+assets/spritesheets/enemies/*/
+assets/protuberances/
+assets/spritesheets/hero/*.png
+!assets/spritesheets/hero/*_px.png
+

@@ -109,7 +109,6 @@ window.GameGfx = {
   // Numeri scelti guardando le schermate: e' inquadratura, si giudica a occhio e non a calcolo.
   SET_STRATI: {
     1: { near: { y: -140, scale: 1.05 } },
-    3: { near: { y: -150, scale: 1.05 } },
     4: { near: { y: -120, scale: 1.05 } },
   },
 

@@ -22,11 +22,6 @@ class PauseScene extends Phaser.Scene {
       stroke: '#14161f', strokeThickness: 7,
     }).setOrigin(0.5);
 
-    this.add.text(W / 2, H / 2 - 74, T.t('pause_hint'), {
-      fontFamily: 'monospace', fontSize: '15px', color: '#fff7e8',
-      stroke: '#14161f', strokeThickness: 3,
-    }).setOrigin(0.5);
-
     // Quattro voci, non piu' tre: si e' ristretto il passo per farcele stare dentro al pannello
     // senza allargarlo (i pulsanti restano alti 42, il pollice ci arriva lo stesso).
     // ⚠️ IL CONTO DEVE ARRIVARE FINO AI TASTI DELL'AUDIO, che stanno in fondo (H/2 + 170): con la

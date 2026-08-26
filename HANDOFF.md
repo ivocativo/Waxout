@@ -485,8 +485,8 @@ appena spawnato) → filtrare per `x.kind`/`x.swarmling`/`x.fugitive` o distrugg
   Pipeline in TRE comandi: `tools/prepara_sfondo.py` (spiana i bordi scuri) ->
   `tools/bake_background_set.ps1` (ridimensiona, scontorna il magenta, specchia) ->
   `tools/rifinisci_sfondo.py` (toglie la frangia magenta e porta il peso a un quinto).
-  **Dal 2026-08-24 i set sono TRE** (`BG_SETS = [1, 2, 3]`): tre ambienti in una run da 15
-  livelli, uno ogni cinque. Motivi e trappole dei due strumenti nuovi in `ROADMAP.md` §H.9.
+  **Dal 2026-08-26 i set sono TRE** (`BG_SETS = [1, 2, 4]`): tre ambienti in una run da 15
+  livelli, uno ogni cinque, e ogni run SORTEGGIA da quale cominciare. Motivi e trappole dei due strumenti nuovi in `ROADMAP.md` §H.9.
 - **Leggendari (dal 2026-08-19, completati il 2026-08-23):** cinque poteri carissimi in negozio,
   ognuno chiuso dietro un grado di infezione da SUPERARE (`window.LEGGENDARI` in state.js):
   bomba (0), granate (1), laser (2), trapano (3), razzo (4).
@@ -636,17 +636,32 @@ installa. **Larghezza ADATTIVA** (main.js) → niente bande nere ai lati. L'app 
 carica l'utente di persona (l'APK di questo ciclo serve ai TESTER, il pacchetto per Play e' l'AAB
 firmato del secondo workflow — vedi `docs/PUBBLICARE.md`).
 
-### 📦 APK da SFOLTIRE (misurato 2026-07-22, non urgente ma cresce)
-L'APK e' passato da 14 a **22 MB** e **~8 MB sono sprecati**: il workflow fa `cp -r assets www/`,
-cioe' copia TUTTA la cartella senza distinguere il materiale di LAVORAZIONE da quello di GIOCO.
-Dentro l'APK finiscono: le immagini sorgente degli sfondi (`fondale.png`, `mid.png`,
-`primo piano.png` = 5,4 MB, servono solo a ri-generare gli asset), le **protuberanze** (1,8 MB, oggi
-disattivate ma ancora CARICATE da BootScene — sprecano anche memoria sul telefono) e
-`bg_flesh_01.jpg` (0,9 MB, si usa solo la sua versione lavorata). Con altri set di sfondo il
-problema cresce. Idea: una convenzione per il materiale di lavorazione (es. non copiare i file
-sorgente dei set) invece di una lista di esclusioni fragile.
+### 📦 PESO: SFOLTITO (2026-08-26)
+Tre cose misurate e sistemate in un giro solo.
 
----
+**1. Le texture del cerume erano TESTO dentro il codice.** `src/assets_data.js` conteneva 2,17 MB
+di data URI — piu' dei PNG che sostituivano (il base64 costa un terzo in piu') e da rileggere e
+decodificare a ogni avvio. Stavano li' per far girare il gioco col doppio clic, ma **da `file://`
+il gioco non parte lo stesso** (Chrome blocca il caricamento delle immagini, c'e' una schermata
+che lo spiega): pagavano un vantaggio che non esiste. Ora sono file, copiati dal workflow.
+⚠️ Si e' chiusa anche una trappola vera: una texture incorporata VINCE su quella su disco, quindi
+sostituendo un PNG senza togliere la voce il gioco continuava a mostrare la versione vecchia,
+senza nessun errore. `src/` passa da 2,9 MB a 0,7.
+
+**2. 52 MB di sorgenti di lavorazione erano tracciate dentro `assets/`**: i disegni originali del
+personaggio, le pose scartate, le cartelle `da_modificare`, le protuberanze spente dal 2026-07-27.
+Nell'APK non finivano — il workflow copia un elenco preciso — ma se le portava dietro chiunque
+clonasse il repository. E' la regola gia' scritta per sprite e sfondi ("in assets/ solo i file
+cotti"), mai applicata a questi. Ora `assets/` tracciata pesa 15 MB invece di 67.
+
+**3. Codice morto: cercato, non trovato.** Le funzioni che sembravano orfane sono risultate tutte
+usate (callback passati per nome, variabili locali). ⚠️ Vale la pena ricordarlo: uno scanner
+grezzo su questo codice da' quasi solo falsi positivi, e cancellare a colpo sicuro sulla sua
+parola avrebbe rotto il gioco in tre punti.
+
+**Resta il pezzo piu' grosso, e va deciso dall'utente:** la MUSICA, 4,4 MB (boss 1,6, menu 1,1,
+vittoria 0,9, livello 0,8). Ricodificarla a bitrate piu' basso o in mono ne risparmierebbe circa
+la meta': e' l'unico intervento rimasto che valga megabyte, ed e' un compromesso sulla qualita'.
 
 ## 🎯 Principi di design (ricerca sulle best practice del genere, 2026-07-22)
 Sintesi filtrata su QUESTO gioco: non ripetere l'analisi, è già stata fatta. Fonti in fondo.

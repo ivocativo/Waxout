@@ -7,18 +7,16 @@ $root = Split-Path -Parent $PSScriptRoot
 
 # chiave (usata nel gioco)  ->  file su disco (relativo alla radice del progetto)
 $manifest = [ordered]@{
+  # ⚠️ IL CERUME NON SI INCORPORA PIU' (2026-08-26): erano 2,17 MB di testo dentro il codice,
+  # piu' pesanti dei PNG che sostituivano e da rileggere a ogni avvio. Ora li copia il workflow.
+  # Rimettere una voce qui vuol dire anche toglierla dal workflow: la copia incorporata VINCE
+  # su quella su disco, e si finirebbe a spedirle tutte e due.
   'bg_flesh_px'     = 'assets/backgrounds/bg_flesh_01_px.png'
   'eardrum'         = 'assets/sprites/eardrum.png'
   'prot_coral_stalk'= 'assets/protuberances/prot_coral_stalk.png'
   'prot_coral_branch'= 'assets/protuberances/prot_coral_branch.png'
   'prot_drip'       = 'assets/protuberances/prot_drip.png'
   'prot_web'        = 'assets/protuberances/prot_web.png'
-  'wax_a'           = 'assets/wax/wax_a.png'
-  'wax_b'           = 'assets/wax/wax_b.png'
-  'wax_c'           = 'assets/wax/wax_c.png'
-  'wax_d'           = 'assets/wax/wax_d.png'
-  'wax_drip_a'      = 'assets/wax/wax_drip_a.png'
-  'wax_drip_b'      = 'assets/wax/wax_drip_b.png'
 }
 
 $sb = New-Object System.Text.StringBuilder

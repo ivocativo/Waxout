@@ -73,8 +73,8 @@ lontani dall'ambra.
  2. **Arte dedicata solo dove serve davvero**, uno o due temi. Da valutare dopo averli giocati:
     la ricoloritura potrebbe bastare per quasi tutti.
 
-✅ **TRE SET DI SFONDO NUOVI (2026-08-24/26).** Generati dall'utente e montati: `BG_SETS =
-[1, 2, 3, 4]`. Prima ce n'era uno solo per tutti e quindici i livelli.
+✅ **DUE SET DI SFONDO NUOVI (2026-08-24/26).** Generati dall'utente e montati: `BG_SETS =
+[1, 2, 4]`. Il set 3 e' stato provato e poi tolto dall'utente: lo stile non convinceva. Prima ce n'era uno solo per tutti e quindici i livelli.
 ⚠️ **Con quattro set il quarto non si sarebbe visto MAI:** una run ha TRE tratti da cinque livelli
 e la rotazione partiva sempre dal primo. Ora ogni run **sorteggia da dove cominciare**
 (`GameState.sfondoDiPartenza`), quindi vede tre ambienti su quattro e cambia combinazione — piu'

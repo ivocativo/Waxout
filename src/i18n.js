@@ -177,7 +177,6 @@ window.I18n = (function () {
       bp_slam_name: 'Slam', bp_slam_desc: 'In mid-air press DOWN: crash down with a shockwave',
       // --- Pausa ---
       pause_title: 'PAUSED',
-      pause_hint: 'ESC or P to resume',
       pause_resume: 'RESUME',
       pause_restart: 'RESTART LEVEL',
       pause_newrun: 'NEW RUN',
@@ -495,7 +494,6 @@ window.I18n = (function () {
       bp_slam_name: 'Schianto', bp_slam_desc: "In aria premi GIU': ti schianti a terra con un'onda d'urto",
       // --- Pausa ---
       pause_title: 'PAUSA',
-      pause_hint: 'ESC o P per riprendere',
       pause_resume: 'RIPRENDI',
       pause_restart: 'RIAVVIA LIVELLO',
       pause_newrun: 'NUOVA RUN',
