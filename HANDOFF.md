@@ -232,7 +232,7 @@ Lavoro nuovo di questa sessione (logica ok, feel/aspetto da provare):
 ```
 python tools\controlla.py
 ```
-96 controlli in ~13m. Apre il gioco in un browser invisibile (Playwright), inietta
+102 controlli in ~14m (piu' la verifica della musica, che sta nel lanciatore). Apre il gioco in un browser invisibile (Playwright), inietta
 `tools/checks.js` ed esce con codice 1 se qualcosa e' rotto. **Ogni controllo nasce da un bug
 realmente successo** (e' annotato nel file quale): cerume sospeso sul terreno, salto morto nelle
 cunette, nemici sotto il pavimento o incastrati nelle membrane, pedane irraggiungibili o sepolte,
@@ -659,7 +659,23 @@ usate (callback passati per nome, variabili locali). ⚠️ Vale la pena ricorda
 grezzo su questo codice da' quasi solo falsi positivi, e cancellare a colpo sicuro sulla sua
 parola avrebbe rotto il gioco in tre punti.
 
-**LA MUSICA NON SI TOCCA, misurata il 2026-08-26.** Avevo proposto di ricodificarla per
+**UN BRANO PER GRADO DI INFEZIONE (2026-08-26).** Cinque brani nuovi scelti dall'utente su
+OpenGameArt, **tutti CC0 verificati sulla scheda prima di scaricarli**: raffreddore *Lark*
+(kistol), febbre *Ciptuned Rock tune* (bertsz), otite *Devoted Guard* (vitalezzz), micosi *Shadows
+Awaken Within* (vitalezzz), acufene *Dark Rising Guitar* (pro-sensory). Il grado 0 tiene il brano
+di sempre. Musica: da 4,3 a 8,2 MB.
+⚠️ **Sono in OPUS, non in Vorbis** (stessa estensione `.ogg`: cambia il codificatore, non il
+contenitore). Non e' un vezzo: il codificatore Vorbis interno di FFmpeg **ignora il bitrate
+richiesto** — 95 secondi uscivano da 2 MB invece di 0,9, e ne' `bit_rate` ne' l'opzione `b` lo
+smuovevano — mentre libopus lo rispetta e a parita' di peso suona meglio.
+⚠️ **Un formato audio che il browser non sa leggere non da' NESSUN errore: semplicemente non si
+sente.** Per questo il lanciatore dei controlli li DECODIFICA tutti e nove prima di dichiarare che
+va bene. ⚠️ Quella verifica sta in `controlla.py` e non in `checks.js` perche' decodificare
+richiede di aspettare, e i controlli del gioco devono girare tutti in un colpo solo.
+Strumento: `tools/bake_musica_ogg.py` (le sorgenti su OpenGameArt sono spesso FLAC o WAV: quelle
+scaricate pesavano 28, 38, 44 e 6,6 MB).
+
+**LA MUSICA VECCHIA NON SI TOCCA, misurata il 2026-08-26.** Avevo proposto di ricodificarla per
 risparmiare ~2 MB. Misurata: i quattro brani stanno **gia' a 76 kbit/s** (menu 2:00 = 1114 KB,
 livello 1:24 = 772, boss 2:51 = 1583, vittoria 1:40 = 933), cioe' circa **9 KB per secondo**. Per
 guadagnare qualcosa bisognerebbe scendere sotto i 56 kbit/s in mono, e li' la differenza si sente.

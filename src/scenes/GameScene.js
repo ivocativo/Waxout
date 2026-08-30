@@ -643,7 +643,10 @@ class GameScene extends Phaser.Scene {
 
     // Atmosfera musicale in base al tipo di livello (round 3 audio): boss/assedio = teso,
     // gli altri = ritmo "missione di pulizia". Cambia con una dissolvenza rispetto al menu.
-    const musicKind = (this.levelKind === 'boss' || this.levelKind === 'siege') ? 'boss' : 'level';
+    // Il brano del livello segue il GRADO DI INFEZIONE (vedi Sfx.branoDelLivello); il boss e
+    // l'assedio tengono il loro, che e' un pezzo di tensione e non un'ambientazione.
+    const musicKind = (this.levelKind === 'boss' || this.levelKind === 'siege')
+      ? 'boss' : window.Sfx.branoDelLivello();
     window.Sfx.setMusic(musicKind);
 
     // Pausa: tasti ESC/P + pulsante a schermo (in alto a destra)

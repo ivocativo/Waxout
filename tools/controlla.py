@@ -124,9 +124,52 @@ def main():
         pagina.add_script_tag(content=sorgente)
         print("Eseguo i controlli (ci vuole un minuto)...\n")
         esito = pagina.evaluate("() => window.__earwaxChecks()")
+
+        # ---- CONTROLLO A PARTE: LA MUSICA SI DECODIFICA? ----
+        # ⚠️ Sta QUI e non in checks.js perche' decodificare un file audio richiede di ASPETTARE, e
+        # i controlli del gioco devono girare tutti in un colpo solo: se si spezzano, fra un pezzo
+        # e l'altro il gioco continua per conto suo e le misure diventano false (e' scritto in
+        # cima a checks.js, ed e' successo davvero). Questa verifica non guarda il gioco in
+        # movimento, quindi puo' permettersi di aspettare.
+        # Serve perche' i brani dei gradi di infezione sono in OPUS mentre gli altri sono in
+        # Vorbis: un audio che il browser non sa leggere non da' NESSUN errore, semplicemente non
+        # si sente, e non se ne accorge nessuno finche' qualcuno non gioca col volume alzato.
+        esito_audio = pagina.evaluate("""
+            async () => {
+              const ctx = new (window.AudioContext || window.webkitAudioContext)();
+              const files = window.Sfx.TRACK_FILES || {};
+              const guasti = [];
+              for (const n of Object.keys(files)) {
+                try {
+                  const b = await (await fetch(files[n])).arrayBuffer();
+                  const a = await ctx.decodeAudioData(b);
+                  if (!(a.duration > 1)) guasti.push(n + ': dura ' + a.duration.toFixed(2) + 's');
+                } catch (e) { guasti.push(n + ': ' + String((e && e.message) || e)); }
+              }
+              const prima = window.GameState.infezione;
+              window.GameState.infezione = 0; const g0 = window.Sfx.branoDelLivello();
+              window.GameState.infezione = 3; const g3 = window.Sfx.branoDelLivello();
+              window.GameState.infezione = prima;
+              if (g0 !== 'level') guasti.push('grado 0 -> ' + g0 + ' invece di level');
+              if (g3 !== 'infezione3') guasti.push('grado 3 -> ' + g3 + ' invece di infezione3');
+              return { quanti: Object.keys(files).length, guasti };
+            }
+        """)
         browser.close()
 
     httpd.shutdown()
+
+    # ESITO DELLA MUSICA, in coda agli altri (vedi il commento accanto alla verifica).
+    if esito_audio["guasti"]:
+        esito["esiti"].append({"controllo": "tutti i brani si decodificano", "livello": "-",
+                               "esito": "FALLITO", "dettaglio": " | ".join(esito_audio["guasti"][:4])})
+        esito["falliti"] += 1
+    else:
+        esito["esiti"].append({"controllo": "tutti i brani si decodificano", "livello": "-",
+                               "esito": "OK",
+                               "dettaglio": f"{esito_audio['quanti']} brani letti dal browser; "
+                                            "il grado sceglie il suo (0 -> level, 3 -> infezione3)"})
+    esito["totale"] += 1
 
     # ---- stampa ----
     larghezza = max((len(e["controllo"]) for e in esito["esiti"]), default=20)

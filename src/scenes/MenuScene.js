@@ -191,6 +191,8 @@ class MenuScene extends Phaser.Scene {
         { titolo: T.t('credits_title'), colore: '#c9a6b2', dim: 12, corpo: [
           T.t('credits_music'),
           T.t('credits_m1'), T.t('credits_m2'), T.t('credits_m3'), T.t('credits_m4'),
+          T.t('credits_m5'), T.t('credits_m6'), T.t('credits_m7'), T.t('credits_m8'),
+          T.t('credits_m9'),
           '', T.t('credits_engine'),
         ] },
       ];

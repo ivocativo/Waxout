@@ -10,6 +10,30 @@ su tutti e quattro, quindi l'abbinamento qui sotto e' certo.
 | `livello.ogg` | livelli normali | *Race of the Wasp* | OwlishMedia | [race-of-the-wasp](https://opengameart.org/content/race-of-the-wasp) | **CC0** ✅ |
 | `boss.ogg` | boss e assedio | *Boss Battle Theme* | CleytonKauffman (CleytonRX) | [boss-battle-theme](https://opengameart.org/content/boss-battle-theme) | **CC0** ✅ |
 | `vittoria.ogg` | run vinta | *Midnight Explosion* | iamoneabe | [midnight-explosion](https://opengameart.org/content/midnight-explosion) | **CC0** ✅ |
+| `infezione1.ogg` | grado 1 — raffreddore | *Lark* | kistol | [lark](https://opengameart.org/content/lark) | **CC0** ✅ |
+| `infezione2.ogg` | grado 2 — febbre | *Ciptuned Rock tune* | bertsz | [ciptuned-rock-tune](https://opengameart.org/content/ciptuned-rock-tune) | **CC0** ✅ |
+| `infezione3.ogg` | grado 3 — otite | *Devoted Guard* | vitalezzz | [devoted-guard](https://opengameart.org/content/devoted-guard) | **CC0** ✅ |
+| `infezione4.ogg` | grado 4 — micosi | *Shadows Awaken Within* | vitalezzz | [shadows-awaken-within](https://opengameart.org/content/shadows-awaken-within) | **CC0** ✅ |
+| `infezione5.ogg` | grado 5 — acufene | *Dark Rising Guitar* | pro-sensory | [dark-rising-guitar](https://opengameart.org/content/dark-rising-guitar) | **CC0** ✅ |
+
+## I CINQUE BRANI DELL'INFEZIONE (2026-08-26)
+
+Scelti dall'utente, uno per grado; il grado 0 tiene *Race of the Wasp*. **Licenza verificata sulla
+scheda di ognuno prima di scaricarli: tutti CC0**, quindi nessun obbligo di citazione — li citiamo
+lo stesso, come gli altri.
+
+⚠️ **Sono in OPUS**, non in Vorbis come i primi quattro (stessa estensione `.ogg`: cambia il
+codificatore, non il contenitore). Non e' un vezzo: il codificatore Vorbis interno di FFmpeg
+IGNORA il bitrate richiesto — 95 secondi uscivano da 2 MB invece di 0,9 — mentre Opus lo rispetta,
+e a parita' di peso suona anche meglio. Verificato che il browser li decodifichi davvero, non dato
+per scontato (controllo automatico [61]).
+
+⚠️ **Le sorgenti erano FLAC e WAV**, cioe' senza compressione: 28, 38, 44 e 6,6 MB. Convertite con
+`tools/bake_musica_ogg.py` a 76 kbit/s, lo stesso bitrate misurato sui brani vecchi. Chi ne aggiunge
+un altro usi quello strumento: la musica costa **9 KB al secondo**, quindi un brano di 95 secondi
+costa 0,9 MB e uno di tre minuti ne costa 1,6.
+⚠️ Tagliati a 95 secondi (tranne *Dark Rising Guitar*, che ne dura 39) con una DISSOLVENZA in coda:
+senza, il punto in cui il brano ricomincia stacca di netto e si sente.
 
 Scartato, NON nel gioco: *Crate Punks OST* di Shuhei Yasuda (9:13, punk) — il file
 `cratePunksOST_5.mp3`, sostituito da *Boss Battle Theme*.

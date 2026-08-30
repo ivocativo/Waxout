@@ -410,7 +410,26 @@ window.Sfx = (function () {
     level: 'assets/musica/livello.ogg',
     boss: 'assets/musica/boss.ogg',
     victory: 'assets/musica/vittoria.ogg',
+    // UN BRANO PER GRADO DI INFEZIONE (2026-08-26, brani scelti dall'utente su OpenGameArt,
+    // tutti CC0). Il grado 0 tiene 'level', gli altri hanno il loro: salire di grado cambia
+    // musica, non solo colori e numeri.
+    // ⚠️ Codificati in OPUS dentro un contenitore .ogg (vedi tools/bake_musica_ogg.py): il
+    // codificatore Vorbis di FFmpeg ignora il bitrate richiesto e li faceva pesare il doppio.
+    infezione1: 'assets/musica/infezione1.ogg',
+    infezione2: 'assets/musica/infezione2.ogg',
+    infezione3: 'assets/musica/infezione3.ogg',
+    infezione4: 'assets/musica/infezione4.ogg',
+    infezione5: 'assets/musica/infezione5.ogg',
   };
+
+  // Quale brano per un livello normale: dipende dal grado di infezione scelto per la run.
+  // ⚠️ Se il brano del grado non c'e' (file mancante, decodifica fallita) si torna a 'level':
+  // meglio la musica di sempre che il silenzio.
+  function branoDelLivello() {
+    const g = (window.GameState && window.GameState.infezione) || 0;
+    const nome = 'infezione' + g;
+    return (g > 0 && TRACK_FILES[nome]) ? nome : 'level';
+  }
   const buffers = {};          // nome -> AudioBuffer decodificato
   let musicSource = null;      // sorgente del brano in riproduzione
   let tracksAsked = false;
@@ -603,7 +622,9 @@ window.Sfx = (function () {
     unlock,
     // volume / musica
     cycleVolume, volLevel, setVolume, getVolume,
-    toggleMusic, musicEnabled, startMusic, stopMusic, setMusic, loadTracks,
+    toggleMusic, musicEnabled, startMusic, stopMusic, setMusic, loadTracks, branoDelLivello,
+    // Esposto per i controlli automatici: uno di loro li decodifica tutti (vedi [61]).
+    TRACK_FILES,
     addAudioButton, addMusicButton,
 
     // ⚠️ I NUMERI DI QUESTI OTTO SUONI LI HA SCELTI L'UTENTE A ORECCHIO (2026-07-31), girando i
