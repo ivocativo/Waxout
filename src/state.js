@@ -577,6 +577,7 @@ window.GameState = {
     this.sfondoDiPartenza = Math.floor(Math.random() * ((window.BG_SETS || [1]).length));
     this.ownedAbilities = [];
     this.prossimoLivello = null;
+    this.livelloDeciso = null;      // tipo e porta del livello in corso, per rigiocarlo uguale
     this.runStartAt = Date.now();
     this.player = this.newPlayer();
     // Lo sblocco permanente "Doppio Salto Innato" (UNLOCKS.djump) da' gia' l'abilita' da

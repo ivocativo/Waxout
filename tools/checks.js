@@ -2107,10 +2107,13 @@ window.__earwaxChecks = function (opts) {
   // prima (segnalato dall'utente 2026-08-26). Il controllo preme la freccia e guarda la tinta.
   {
     window.Meta.forzaInfezione(window.CONFIG.INFEZIONE_MAX);
-    window.GameState.infezione = 0;
+    window.Meta.setInfezioneScelta(0);
     g.scene.start('MenuScene');
     const ms = g.scene.getScene('MenuScene');
     avanza(ms, 8);
+    // ⚠️ Non si da' per scontato che il menu parta da zero: dal 2026-08-26 parte dal grado
+    // RICORDATO. Si legge quello che c'e' e si verifica che la freccia lo faccia salire di uno.
+    const gradoPrima = window.GameState.infezione;
     const strato = (ms.bgLayers || [])[0];
     const freccia = ms.children.list.find((o) => o.type === 'Text' && o.text === '>');
     if (!strato || !freccia) {
@@ -2121,16 +2124,71 @@ window.__earwaxChecks = function (opts) {
       freccia.emit('pointerdown');
       avanza(ms, 4);
       const dopo = ((ms.bgLayers || [])[0] || strato).s.tintTopLeft;
-      if (window.GameState.infezione === 1 && prima !== dopo) {
+      if (window.GameState.infezione === gradoPrima + 1 && prima !== dopo) {
         ok('cambiando infezione lo sfondo risponde', '-',
           'tinta dello strato lontano: 0x' + prima.toString(16) + ' -> 0x' + dopo.toString(16));
       } else {
         ko('cambiando infezione lo sfondo risponde', '-',
-          'grado=' + window.GameState.infezione + ' tinta ' + prima + ' -> ' + dopo);
+          'grado ' + gradoPrima + ' -> ' + window.GameState.infezione
+          + ' tinta ' + prima + ' -> ' + dopo);
       }
     }
     window.GameState.infezione = 0;
     g.scene.stop('MenuScene');
+  }
+
+  // [59] RIAVVIANDO IL LIVELLO SI RIGIOCA LO STESSO LIVELLO.
+  // ⚠️ La scelta della porta viene CONSUMATA all'inizio del livello (azzerata, cosi' non resta per
+  // quello dopo): premendo "riavvia livello" la scena si ricostruiva senza piu' quella scelta, e
+  // una corsa o un assedio diventavano un livello normale (segnalato dall'utente 2026-08-26).
+  // Il controllo prova proprio il gesto del giocatore: scegli, gioca, riavvia.
+  {
+    const guasti = [];
+    ['rush', 'siege'].forEach((tipo) => {
+      window.GameState.reset();
+      window.GameState.level = 4;
+      window.GameState.prossimoLivello = { kind: tipo, mutator: 'armored', waxMult: 1 };
+      g.scene.start('GameScene');
+      const gs = g.scene.getScene('GameScene');
+      avanza(gs, 12);
+      const primaTipo = gs.levelKind, primaMut = gs.mutator ? gs.mutator.id : null;
+      gs.scene.restart();                       // il pulsante "riavvia livello" fa esattamente questo
+      avanza(g.scene.getScene('GameScene'), 16);
+      const dopo = g.scene.getScene('GameScene');
+      const dopoTipo = dopo.levelKind, dopoMut = dopo.mutator ? dopo.mutator.id : null;
+      if (primaTipo !== tipo) guasti.push(tipo + ': non e nemmeno partito (' + primaTipo + ')');
+      if (dopoTipo !== primaTipo) guasti.push(tipo + ': dopo il riavvio e diventato ' + dopoTipo);
+      if (dopoMut !== primaMut) guasti.push(tipo + ': modificatore ' + primaMut + ' -> ' + dopoMut);
+    });
+    if (!guasti.length) {
+      ok('riavviando si rigioca lo stesso livello', 4, 'corsa e assedio, col loro modificatore');
+    } else {
+      ko('riavviando si rigioca lo stesso livello', 4, guasti.join(' | '));
+    }
+  }
+
+  // [60] IL GRADO DI INFEZIONE SI RICORDA FRA UN AVVIO E L'ALTRO.
+  // ⚠️ Prima viveva solo in memoria: riaprendo il gioco si ripartiva sempre da zero, e chi aveva
+  // sbloccato il grado 4 doveva ripremere la freccia quattro volte ogni volta.
+  {
+    window.Meta.forzaInfezione(3);                    // record: ha battuto fino al 3
+    window.Meta.setInfezioneScelta(2);
+    const dopoScelta = window.Meta.infezionePredefinita();
+    // "Riapertura del gioco" = si rilegge il salvataggio da zero.
+    window.Meta.reload();
+    const dopoRiapertura = window.Meta.infezionePredefinita();
+    // E chi non ha mai scelto parte dal piu' alto sbloccato, non da zero. ⚠️ Il -1 si scrive
+    // direttamente: non e' una scelta valida ma il SEGNO che non si e' mai scelto, e infatti il
+    // setter lo rifiuterebbe portandolo a 0 (che vorrebbe dire "ho scelto il grado zero").
+    window.Meta.get().infezioneScelta = -1;
+    const mai = window.Meta.infezionePredefinita(), massimo = window.Meta.infezioneUnlocked();
+    if (dopoScelta === 2 && dopoRiapertura === 2 && mai === massimo) {
+      ok('il grado di infezione si ricorda', '-',
+        'scelto 2 -> riaperto 2; mai scelto -> parte dal massimo sbloccato (' + massimo + ')');
+    } else {
+      ko('il grado di infezione si ricorda', '-',
+        'scelto=' + dopoScelta + ' riaperto=' + dopoRiapertura + ' maiScelto=' + mai + ' massimo=' + massimo);
+    }
   }
 
   // [42] L'ARCO DELLA BASTONATA E' UN QUARTO DI CERCHIO IN TUTTI E DUE I VERSI (2026-08-19).

@@ -11,7 +11,7 @@ window.Meta = (function () {
     // giocare solo al grado 0; vincere al grado N lo porta a max(N, attuale), sbloccando N+1.
     // arma = kit dell'ARSENALE scelto per la prossima run (window.ARMI). Gli sblocchi delle armi
     // stanno dentro `unlocks` con la chiave 'arma_<id>', cosi' riusano spend/setUnlock esistenti.
-    return { bank: 0, bestLevel: 1, runs: 0, wins: 0, infezioneMax: -1, arma: 'fioc', leggendario: '', unlocks: {} };
+    return { bank: 0, bestLevel: 1, runs: 0, wins: 0, infezioneMax: -1, infezioneScelta: -1, arma: 'fioc', leggendario: '', unlocks: {} };
   }
 
   function load() {
@@ -26,6 +26,9 @@ window.Meta = (function () {
         runs: data.runs || 0,
         wins: data.wins || 0,   // round A, A.1: run PORTATE A TERMINE (non solo giocate)
         infezioneMax: (typeof data.infezioneMax === 'number') ? data.infezioneMax : -1,
+        // -1 = mai scelto: al primo avvio si parte dal grado piu' alto sbloccato (vedi
+        // infezionePredefinita). Chi ha gia' scelto ritrova la sua scelta.
+        infezioneScelta: (typeof data.infezioneScelta === 'number') ? data.infezioneScelta : -1,
         arma: data.arma || 'fioc',
         leggendario: data.leggendario || '',   // '' = nessuno scelto: decide leggendarioEquipaggiato
 
@@ -61,9 +64,32 @@ window.Meta = (function () {
     recordWin(clearedTier) {
       state.wins += 1;
       const tier = clearedTier | 0;
-      if (tier > state.infezioneMax) state.infezioneMax = tier;
+      if (tier > state.infezioneMax) {
+        state.infezioneMax = tier;
+        // Sbloccando un grado nuovo diventa lui il predefinito: chi ha appena vinto vuole provare
+        // il gradino successivo, non ricominciare da quello che ha appena battuto.
+        state.infezioneScelta = this.infezioneUnlocked();
+      }
       save();
       return state;
+    },
+
+    // ---- GRADO DI INFEZIONE RICORDATO FRA UN AVVIO E L'ALTRO ----
+    // ⚠️ Prima la scelta viveva solo in memoria: riaprendo il gioco si ripartiva SEMPRE da zero,
+    // e chi aveva sbloccato il grado 4 doveva ripremere la freccia quattro volte a ogni avvio
+    // (segnalato dall'utente 2026-08-26).
+    infezionePredefinita() {
+      const massimo = this.infezioneUnlocked();
+      const scelta = state.infezioneScelta;
+      // Mai scelto: si parte dal piu' alto sbloccato. Gia' scelto: la sua scelta, ma senza mai
+      // superare cio' che e' sbloccato (un azzeramento dei progressi puo' abbassare il tetto).
+      return Math.max(0, Math.min(scelta < 0 ? massimo : scelta, massimo));
+    },
+
+    setInfezioneScelta(n) {
+      state.infezioneScelta = Math.max(0, Math.min(n | 0, this.infezioneUnlocked()));
+      save();
+      return state.infezioneScelta;
     },
 
     // Grado di infezione PIU' ALTO selezionabile: uno sopra il record superato, con tetto a

@@ -659,9 +659,14 @@ usate (callback passati per nome, variabili locali). ⚠️ Vale la pena ricorda
 grezzo su questo codice da' quasi solo falsi positivi, e cancellare a colpo sicuro sulla sua
 parola avrebbe rotto il gioco in tre punti.
 
-**Resta il pezzo piu' grosso, e va deciso dall'utente:** la MUSICA, 4,4 MB (boss 1,6, menu 1,1,
-vittoria 0,9, livello 0,8). Ricodificarla a bitrate piu' basso o in mono ne risparmierebbe circa
-la meta': e' l'unico intervento rimasto che valga megabyte, ed e' un compromesso sulla qualita'.
+**LA MUSICA NON SI TOCCA, misurata il 2026-08-26.** Avevo proposto di ricodificarla per
+risparmiare ~2 MB. Misurata: i quattro brani stanno **gia' a 76 kbit/s** (menu 2:00 = 1114 KB,
+livello 1:24 = 772, boss 2:51 = 1583, vittoria 1:40 = 933), cioe' circa **9 KB per secondo**. Per
+guadagnare qualcosa bisognerebbe scendere sotto i 56 kbit/s in mono, e li' la differenza si sente.
+Proposta ritirata: era una stima, non una misura.
+⚠️ Quel numero — **9 KB al secondo di musica** — e' anche il metro per i brani futuri: una canzone
+per grado di infezione (5 in piu', il grado 0 tiene la sua) costa ~4 MB con loop da 90 secondi,
+~2,7 MB con loop da 60.
 
 ## 🎯 Principi di design (ricerca sulle best practice del genere, 2026-07-22)
 Sintesi filtrata su QUESTO gioco: non ripetere l'analisi, è già stata fatta. Fonti in fondo.
@@ -879,6 +884,31 @@ PG e nemici ci camminano via **heightmap-snap** (in `agganciaAlTerreno`: `body.y
   affari dell'utente — nessuna password, nessun file di firma passa da qui (vedi `docs/PUBBLICARE.md`).
 
 ---
+
+## ⚠️ UNA SCELTA "CONSUMATA" SPARISCE ANCHE QUANDO NON DEVE (2026-08-26)
+`GameState.prossimoLivello` (la scelta fatta alla porta) viene azzerata appena il livello la
+legge, cosi' non resta appiccicata al livello dopo. Giusto — ma il pulsante **RIAVVIA LIVELLO**
+ricostruisce la scena, e la scelta a quel punto non c'era piu': una corsa o un assedio
+ricominciavano come livello normale. Lo stesso valeva per il modificatore sorteggiato, che al
+riavvio veniva ripescato a caso.
+**Rimedio:** la decisione presa si mette da parte in `GameState.livelloDeciso`, con il NUMERO DEL
+LIVELLO come chiave. Riavviando lo stesso livello si riusa; passando al successivo il ricordo non
+vale piu' e si sorteggia da capo.
+⚠️ Il ricordo distingue **"non deciso" (undefined) da "deciso che non ce n'e'" (null)**: senza
+quella distinzione, riavviando un livello senza modificatore ne poteva comparire uno.
+⚠️ **E' la stessa famiglia del cronometro non azzerato** (le granate morte alla seconda run): dati
+che vivono un po' piu' a lungo o un po' meno del previsto. Quando si azzera qualcosa "per pulizia",
+chiedersi sempre chi altro la stava guardando.
+
+## ⚠️ QUELLO CHE IL GIOCATORE SCEGLIE VA SALVATO (2026-08-26)
+Il grado di infezione viveva solo in memoria: riaprendo il gioco si ripartiva sempre da zero, e
+chi aveva sbloccato il grado 4 doveva ripremere la freccia quattro volte a ogni avvio.
+Ora sta in `Meta` (`infezioneScelta`), con due regole che valgono la pena:
+ - chi non ha **mai** scelto parte dal grado piu' alto sbloccato, non da zero;
+ - **vincendo e sbloccando un grado nuovo, quello diventa il predefinito**: chi ha appena battuto
+   il 3 vuole provare il 4, non ricominciare dal 3.
+⚠️ `-1` non e' una scelta: e' il segno di "mai scelto". Il setter lo rifiuta portandolo a 0, che
+vorrebbe dire "ho scelto il grado zero" — due cose diverse che sarebbe facile confondere.
 
 ## LEZIONI DI BILANCIAMENTO (2026-08-18/19) — valgono oltre il singolo numero
 

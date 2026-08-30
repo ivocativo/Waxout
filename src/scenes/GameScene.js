@@ -101,8 +101,16 @@ class GameScene extends Phaser.Scene {
     // il livello dopo); altrimenti comportamento a sorteggio di sempre (livello 1: non passa mai
     // da una porta, perche' UpgradeScene/DoorScene non sono ancora girate).
     const levelNum = window.GameState.level;
-    const porta = window.GameState.prossimoLivello;
-    window.GameState.prossimoLivello = null;
+    // ⚠️ RIAVVIANDO IL LIVELLO SI DEVE RIGIOCARE LO STESSO LIVELLO. La scelta della porta viene
+    // CONSUMATA qui (azzerata, cosi' non resta per il livello dopo): premendo "riavvia livello" la
+    // scena ricreava tutto da capo senza piu' quella scelta, e una corsa o un assedio diventavano
+    // un livello normale (segnalato dall'utente 2026-08-26). Ora la decisione presa viene
+    // RICORDATA insieme al numero del livello: se si ricomincia lo stesso, si riusa.
+    const G = window.GameState;
+    const ricordo = G.livelloDeciso;
+    const eRiavvio = !!ricordo && ricordo.level === levelNum && !G.prossimoLivello;
+    const porta = eRiavvio ? ricordo.porta : G.prossimoLivello;
+    G.prossimoLivello = null;
     let kind, mutatoreForzato, waxMultPorta;
     if (levelNum % 5 === 0) {
       kind = 'boss';
@@ -110,6 +118,8 @@ class GameScene extends Phaser.Scene {
       kind = porta.kind;
       mutatoreForzato = (porta.mutator === undefined) ? null : porta.mutator;   // null = "nessun modificatore", scelto apposta
       waxMultPorta = porta.waxMult;
+    } else if (eRiavvio) {
+      kind = ricordo.kind;                       // riavvio senza porta: si rigioca lo stesso tipo
     } else {
       kind = (levelNum % 5 === 3) ? 'swarm' : 'normal';
       if (kind === 'normal' && levelNum >= 2) {
@@ -120,6 +130,10 @@ class GameScene extends Phaser.Scene {
       }
     }
     this.levelKind = kind;
+    // Si mette da parte la decisione di QUESTO livello, per l'eventuale riavvio. Il numero del
+    // livello fa da chiave: quando si passa al successivo il ricordo non vale piu' e si sorteggia.
+    G.livelloDeciso = { level: levelNum, kind, porta: porta || null,
+      mutatore: eRiavvio ? ricordo.mutatore : undefined };
     // Letti da chooseMutator() (chiamata piu' sotto, dopo buildCeilingProfile/drawBackground):
     // undefined = nessuna porta per questo livello (comportamento a sorteggio attuale).
     this._doorMutatorId = mutatoreForzato;
@@ -753,23 +767,43 @@ class GameScene extends Phaser.Scene {
   // undefined = nessuna porta per questo livello (livello 1): comportamento a sorteggio di sempre.
   chooseMutator() {
     this.resetMutators();
-    if (this.levelKind === 'boss') return;
+    if (this.levelKind === 'boss') { this.ricordaMutatore(); return; }
     if (this._doorMutatorId !== undefined) {
-      if (this._doorMutatorId === null) return;
+      if (this._doorMutatorId === null) { this.ricordaMutatore(); return; }
       this.mutator = window.MUTATORS.find((m) => m.id === this._doorMutatorId) || null;
+      if (this.mutator) this.mutator.apply(this);
+      this.ricordaMutatore();
+      return;
+    }
+    // RIAVVIO: si rigioca lo stesso modificatore di prima, non se ne sorteggia un altro. ⚠️ Vale
+    // anche per "nessun modificatore": il ricordo distingue "non deciso" (undefined) da "deciso
+    // che non ce n'e'" (null), se no riavviando un livello pulito ne poteva spuntare uno.
+    const deciso = window.GameState.livelloDeciso;
+    if (deciso && deciso.level === window.GameState.level && deciso.mutatore !== undefined) {
+      if (deciso.mutatore === null) return;
+      this.mutator = window.MUTATORS.find((m) => m.id === deciso.mutatore) || null;
       if (this.mutator) this.mutator.apply(this);
       return;
     }
-    if (window.GameState.level < 2) return;
-    if (Math.random() > 0.55) return;   // ~55% dei livelli ha un mutatore
+    if (window.GameState.level < 2) { this.ricordaMutatore(); return; }
+    if (Math.random() > 0.55) { this.ricordaMutatore(); return; }   // ~55% dei livelli ha un mutatore
     // ⚠️ SOLO I MUTATORI COMPATIBILI COL TIPO DI LIVELLO. Senza questo filtro usciva SCIAME (il
     // livello dei tanti nemici) insieme a BERSERK ("pochi ma feroci"): due cartelli che si
     // smentiscono, e un livello che non e' ne' una cosa ne' l'altra. La regola sta nei dati
     // (window.mutatoreVaCon), non qui, perche' anche la PORTA pesca mutatori e deve usare la stessa.
     const ammessi = window.MUTATORS.filter((m) => window.mutatoreVaCon(m, this.levelKind));
-    if (!ammessi.length) return;
+    if (!ammessi.length) { this.ricordaMutatore(); return; }
     this.mutator = Phaser.Utils.Array.GetRandom(ammessi);
     this.mutator.apply(this);
+    this.ricordaMutatore();
+  }
+
+  // Segna nel ricordo del livello quale modificatore e' toccato, cosi' un riavvio lo ripete.
+  // ⚠️ Va chiamata anche quando NON ne esce nessuno: "nessun modificatore" e' una decisione, e
+  // senza segnarla il riavvio di un livello pulito poteva farne comparire uno.
+  ricordaMutatore() {
+    const d = window.GameState.livelloDeciso;
+    if (d && d.level === window.GameState.level) d.mutatore = this.mutator ? this.mutator.id : null;
   }
 
   // Sceglie (a volte) un EVENTO CASUALE per questo livello: indipendente dai mutatori (puo'

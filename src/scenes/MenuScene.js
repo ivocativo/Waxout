@@ -91,8 +91,9 @@ class MenuScene extends Phaser.Scene {
     // reset(): begin() la conserva.
     const unlocked = window.Meta.infezioneUnlocked();
     if (unlocked >= 1) {
-      // Clamp: se un reset dei progressi ha abbassato lo sblocco sotto il valore memorizzato.
-      window.GameState.infezione = Phaser.Math.Clamp(window.GameState.infezione || 0, 0, unlocked);
+      // Il grado di partenza viene dal salvataggio, non dalla memoria della sessione: riaprendo
+      // il gioco si ritrova quello che si stava giocando (vedi Meta.infezionePredefinita).
+      window.GameState.infezione = window.Meta.infezionePredefinita();
       const iy = 384;
       const label = this.add.text(W / 2, iy, '', {
         fontFamily: 'monospace', fontSize: '18px', color: '#ff9a8a',
@@ -124,6 +125,7 @@ class MenuScene extends Phaser.Scene {
         a.on('pointerdown', () => {
           window.Sfx.unlock();
           window.GameState.infezione = Phaser.Math.Clamp((window.GameState.infezione || 0) + dx / Math.abs(dx), 0, unlocked);
+          window.Meta.setInfezioneScelta(window.GameState.infezione);   // si ricorda per la prossima volta
           refresh();
         });
         a._verso = dx / Math.abs(dx);
