@@ -245,7 +245,11 @@ Come sono venuti, e cosa e' cambiato rispetto al progetto:
   se ne recupera UNA** (io proponevo 3 per livello). E' piu' avara ma piu' interessante: spenderle
   costa davvero, e non conviene svuotare la scorta prima del traguardo. Sono le uniche a
   MUNIZIONI invece che a ricarica, e infatti il pulsante mostra un numero invece della lancetta.
-  Non scoppiano al contatto: la miccia obbliga a tirarle dove i nemici SARANNO.
+  Non scoppiano al contatto: la miccia obbliga a tirarle dove i nemici SARANNO — ed e' anche il
+  motivo per cui sul cerume **RIMBALZANO invece di esplodere**, a differenza del razzo.
+  ⚠️ Il rimbalzo e' stato proposto e **approvato dall'utente** (2026-08-26): non e' un ripiego
+  tecnico, e' il carattere dell'arma. Cambiarlo vorrebbe dire trasformare la granata in un
+  secondo razzo.
 - **RAZZI a munizioni** (2026-08-24, dall'utente): tre per run, uno torna a fine livello, come le
   granate. Con la ricarica a tempo era il quinto potere "aspetta e ripremi"; a munizioni diventa una
   decisione. E il cerume lo FERMA: attraversarlo lo faceva sembrare un fantasma.
