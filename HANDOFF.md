@@ -6,7 +6,7 @@
 > chiunque lo trovi sta in **`README.md`**. Regola d'oro: ogni informazione ha UNA casa sola,
 > niente sezioni duplicate tra i tre file.
 
-_Ultimo aggiornamento: 2026-08-24 · Ultimo commit pushato: `08c45c7`._
+_Ultimo aggiornamento: 2026-08-26 · Ultimo commit pushato: `89e61c7`._
 _**Fatti e pushati:** Round 1 e 2 (correzioni playtest, fino a `75df562`); Round 3 AUDIO (synth +_
 _3 atmosfere, boss punk); **APP ANDROID via GitHub Actions**; **Round 4 — CONDOTTO/TERRENO:**_
 _soffitto ondulato + **TERRENO stile Terraria** (colline e cunette) percorso via "mappa di altezze";_
@@ -115,8 +115,13 @@ _contraccolpo, ed e' ritagliata sulla sagoma del condotto._
 _**✅ INFEZIONE CHE SI SENTE (2026-08-24):** i gradi c'erano ma sparivano dentro gli arrotondamenti_
 _(vedi §Lezioni di bilanciamento). Ora vita +30% e danno +15% per grado, piu' un nemico in campo_
 _ogni due gradi._
-_**STATO ORA:** in Estetica resta un altro SET DI SFONDO. Restano gli **EASTER EGG** da scegliere_
-_e l'ARENA dedicata dell'assedio. Il resto del lavoro arriva dai playtest dei tester._
+_**✅ TUTTO IL BLOCCO H E' CHIUSO (2026-08-26).** Leggendari, tetti, rimescola, varieta' per grado._
+_**✅ QUATTRO SET DI SFONDO** (tre in gioco), **SEI TEMI** dell'infezione e **UNA CANZONE PER GRADO**._
+_**✅ ALLEGGERIMENTO:** codice -2,2 MB (le texture non sono piu' testo dentro assets_data.js) e_
+_repository -52 MB di sorgenti di lavorazione._
+_**STATO ORA:** il prossimo passo naturale sono le **differenze di GAMEPLAY per grado di infezione**_
+_(oggi cambiano aspetto e numeri, non il gesto). Poi EASTER EGG e ARENA dell'assedio._
+_**La lista viva sta in cima a `ROADMAP.md`**, sotto "DA FARE ADESSO"._
 
 **NOME: ✅ APPLICATO (2026-07-31).** L'app si chiama **WAXOUT** ("earwax" da solo portava al
 party game di Jackbox e a Earwax Clinic gia' su Play). Nel menu: "WAXOUT" grande e "The Earwax
@@ -207,23 +212,22 @@ pausa il disegno continua, le animazioni no). Costa due righe ed evita di insegu
 non esiste — e' successo davvero col laser (2026-08-23).
 ⚠️ Le GIF servono per il movimento: una nebbia ferma sembra una macchia.
 
-### Ancora da far playtestare sul telefono all'utente (dal più vecchio)
-Arretrato mai provato dal vivo (verificato solo staticamente in sessioni precedenti):
-- `5a52325`→`00ec955` — gocce dal soffitto, mutatori, tipi di livello (corsa/**assedio**),
-  varianti élite Corazzato/Esplosivo, reset progressi, vari fix.
-Lavoro nuovo di questa sessione (logica ok, feel/aspetto da provare):
-- `c0d6bdc` — élite **SPLIT** (si sdoppia in 2 figli alla morte).
-- `f0f2273` — **rarità carte** (comune/rara/leggendaria colorate) + eventi **Fuggitivo Dorato**
-  e **Frana di cerume**.
-- `06b4b6b` — evento **Sciame improvviso** (+ riordino dei `.md`).
-- `5490cc5` — **game feel**: accel/decel del movimento. Due cose SOGGETTIVE da giudicare col
-  playtest (non bug): dopo lo scatto il PG "scivola" un attimo verso la velocità normale; il
-  rinculo da colpo subito dura un filo di più. Se stonano: `MOVE_ACCEL_GROUND`/`AIR` in `state.js`.
-- `257c2a5` — **juice procedurale** (il PG si schiaccia/allunga a salto/atterraggio/inversione/colpo)
-  + **carattere comico** (fumetto con battute a inizio livello/uccisione/colpo/boss). Da giudicare:
-  quanto marcato il juice (`JUICE_*` in `state.js`), se le battute fanno ridere/stonano (in `state.js`
-  `SPEECH` + `i18n.js`). Punto specifico: accovacciandosi può vedersi un micro-"assestamento" (effetto
-  collaterale già preesistente, ora visibile) — segnalare se stona.
+### Ancora da far playtestare sul telefono all'utente
+Aggiornato 2026-08-26. Le cose piu' recenti, che l'utente non ha ancora provato con mano:
+- **musica per grado di infezione** (5 brani nuovi): da ascoltare soprattutto il passaggio fra un
+  livello e l'altro DENTRO la stessa run — li' la musica NON deve cambiare — e fra una run a
+  infezione 2 e una a infezione 4, dove deve cambiare;
+- **granate a 5 e razzi a 3**, e la granata che rimbalza sul cerume invece di attraversarlo
+  (comportamento approvato dall'utente il 2026-08-26);
+- **difficolta' a composto** ai gradi alti: col negozio finito, a infezione 5 la crosta chiede 7
+  colpi e i nemici in campo sono dieci. Se risulta spugnoso, la manopola e' `enemyHpPasso`;
+- **tre set di sfondo con rotazione sorteggiata**: due run di fila devono mostrare combinazioni
+  diverse di ambienti;
+- **riavvio del livello** che mantiene tipo e modificatore, e **grado di infezione ricordato** fra
+  un avvio e l'altro.
+
+Arretrato piu' vecchio, mai verificato dal vivo in modo sistematico: i tipi di livello
+(corsa/assedio), le varianti elite, gli eventi casuali.
 
 ---
 

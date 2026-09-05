@@ -1,7 +1,46 @@
-# BLOCCO H — Motivare il lungo periodo (2026-08-19) 🚧 IN PROGETTAZIONE
+# BLOCCO H — Motivare il lungo periodo (2026-08-19) ✅ CHIUSO il 2026-08-26
 
-Richiesta dell'utente: dare un motivo per continuare a giocare alle difficolta' alte. Quattro
-filoni, piu' una misura che li lega.
+Richiesta dell'utente: dare un motivo per continuare a giocare alle difficolta' alte. Tutti e
+quattro i filoni sono fatti — leggendari, tetti piu' alti, rimescola, varieta' per grado — piu' la
+misura che li lega e l'assedio che non si gioca piu' stando fermi.
+
+---
+
+# 🔜 DA FARE ADESSO (aggiornato 2026-08-26)
+
+Il gioco e' **pubblicato** e cresce coi playtest: questa e' la lista viva, il resto del file e' la
+cronaca di com'e' stato costruito.
+
+### 1. DIFFERENZE DI GAMEPLAY PER GRADO DI INFEZIONE 🎯 il prossimo passo naturale
+Oggi i sei gradi cambiano **aspetto** (colori, atmosfera, musica) e **numeri** (vita, velocita',
+quanti nemici). Manca la terza gamba: che ogni malattia si GIOCHI in modo diverso. Idee che
+nascono dai temi stessi, da progettare insieme all'utente:
+ - **raffreddore** → terreno scivoloso (la frenata perde presa);
+ - **febbre** → zone che scottano, o cerume incandescente che fa male al contatto;
+ - **otite** → pozze di pus che rallentano (la pozza scivolosa esiste gia': stessa meccanica,
+   verso opposto);
+ - **micosi** → spore che intossicano se resti fermo troppo a lungo;
+ - **acufene** → disturbo a ondate: schermo che pulsa e comandi che "vibrano" per un istante.
+⚠️ Regola gia' pagata col Blocco H: una difficolta' che cambia i NUMERI si dimentica, una che
+cambia il GESTO si ricorda. Qui vale lo stesso.
+
+### 2. EASTER EGG — l'utente sceglie quali (elenco pronto in §E, piu' in basso)
+Ce n'e' UNO solo oggi (lo scrigno in alto). Il candidato migliore per rapporto risata/lavoro resta
+il **coton fioc conficcato**: e' anche una battuta vera, visto che nell'orecchio non si usano.
+
+### 3. ARENA DEDICATA PER L'ASSEDIO
+Oggi l'assedio riusa un livello normale col cronometro. Con la nebbia che spinge in avanti
+(§H.7) un'arena pensata apposta renderebbe il tipo di livello davvero suo.
+
+### 4. RIFINITURE NOTE, piccole
+ - **Giuntura specchiata del primo piano**: in qualche punto si legge un motivo simmetrico. In
+   partita e' quasi sempre coperto dal terreno; si attenua allargando la fetta in cottura.
+ - **AdMob**: rimandato dall'utente a gioco assestato.
+
+### Sempre in corso
+Cicli di playtest dei tester → correzioni → nuovo pacchetto. E' il motore del progetto adesso.
+
+---
 
 ## LA MISURA CHE ORIENTA TUTTO
 Colpi di GETTO per uccidere ogni nemico, per grado di infezione — livello 5, getto MAI potenziato
@@ -249,7 +288,7 @@ in modo CORSA il gioco stesso considera 31-50 secondi sufficienti ad attraversar
 **Da tarare col playtest:** se lo si preme ogni volta e' troppo economico, se non lo si preme mai
 e' troppo caro.
 
-## H.2 — POTENZIAMENTI LEGGENDARI nel negozio (deciso, contenuto da scegliere)
+## H.2 — POTENZIAMENTI LEGGENDARI nel negozio ✅ FATTI (cinque, vedi §H.8)
 Costo molto alto E sbloccati solo finendo un grado di infezione. Icona con punto interrogativo
 finche' non si e' raggiunto il grado richiesto: e' il richiamo che deve far venire voglia di
 salire. Idee dell'utente: razzi, bomba pulisci-schermo, raggio laser.
@@ -276,12 +315,13 @@ dal primo giro. Misurato: crosta a livello 15 infezione 5 da 22 palline a 12.
 ⚠️ Da fare INSIEME a H.2: se i leggendari costano molto e i tetti salgono, la banca serve per due
 cose contemporaneamente e i prezzi vanno guardati insieme, non uno alla volta.
 
-## H.4 — VARIETA' PER GRADO DI INFEZIONE (deciso, bloccato sull'arte)
-Sfondi diversi e musica diversa ai gradi alti.
-⚠️ **IL MECCANISMO C'E' GIA': `window.BG_SETS`, oggi vale `[2]`, cioe' UN SOLO set.** Manca solo
-il materiale: servono 3 immagini per set (vista piatta, fondo magenta) generate dall'utente, poi
-`tools/bake_background_set.ps1` fa il resto. Vedi la memoria `earwaxwar-background-pipeline`.
-Non e' lavoro di codice: e' lavoro d'arte che deve fare l'utente.
+## H.4 — VARIETA' PER GRADO DI INFEZIONE ✅ FATTA (2026-08-24/26)
+Sfondi diversi e musica diversa ai gradi alti. **Tutto in gioco:**
+ - **tre set di sfondo** (`BG_SETS = [1, 2, 4]`, arte dell'utente) piu' i **sei temi** che
+   ricolorano fondale e carne per grado (§H.9);
+ - **una canzone per grado** (§M): raffreddore *Lark*, febbre *Ciptuned Rock tune*, otite *Devoted
+   Guard*, micosi *Shadows Awaken Within*, acufene *Dark Rising Guitar*, tutte CC0.
+Resta la terza gamba, il GAMEPLAY per grado: vedi la lista in cima al file.
 
 ## DAL BACKLOG, gia' in elenco e utile a questo scopo
 - **Varianti sfondo per livello** e **altri set di sfondo** (§Estetica): stesso meccanismo di H.4.
