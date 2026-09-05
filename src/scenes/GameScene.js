@@ -3034,10 +3034,29 @@ class GameScene extends Phaser.Scene {
     (this.granateVive || []).slice().forEach((g) => {
       if (!g.active) return;
       g._vy += window.CONFIG.GRAVITY * s;
+      const xPrima = g.x, yPrima = g.y;
       g.x += g._vx * s;
       g.y += g._vy * s;
       const suolo = this.terrainTopAt(Phaser.Math.Clamp(g.x, 0, this.worldW)) - 6;
       if (g.y >= suolo) { g.y = suolo; g._vy = -g._vy * 0.35; g._vx *= 0.6; }   // rimbalza e rotola
+      // ⚠️ IL CERUME FERMA LA GRANATA (segnalato dall'utente 2026-08-26: "le granate attraversano
+      // il cerume"). E' simulata a mano, quindi nessuna collisione la riguardava: passava dentro i
+      // cumuli come se non ci fossero. Qui non SCOPPIA come il razzo — rimbalza: e' un oggetto che
+      // rotola con la miccia accesa, e farlo scoppiare al contatto le toglierebbe il suo carattere
+      // (tirarla DOVE SARANNO i nemici). Lo scoppio poi sfonda comunque il cumulo, che sta nel raggio.
+      const cumulo = this.blocks.getChildren().find((b) => b.active
+        && Phaser.Geom.Rectangle.Contains(b.getBounds(), g.x, g.y));
+      if (cumulo) {
+        const daSopra = yPrima <= cumulo.getBounds().top;
+        if (daSopra) {                       // ci atterra sopra e ci rotola
+          g.y = cumulo.getBounds().top - 6;
+          g._vy = -Math.abs(g._vy) * 0.35;
+          g._vx *= 0.7;
+        } else {                             // ci sbatte contro di lato
+          g.x = xPrima;
+          g._vx = -g._vx * 0.45;
+        }
+      }
       g.setScale(1 + Math.sin(now / 60) * 0.12);                                 // pulsa: la miccia
       if (now >= g._fino) {
         const dmg = Math.max(1, Math.round(window.GameState.player.damage * window.CONFIG.GRANATA_DANNO));

@@ -2191,6 +2191,44 @@ window.__earwaxChecks = function (opts) {
     }
   }
 
+  // [61] IL CERUME FERMA LA GRANATA.
+  // ⚠️ Granate e razzi sono simulati A MANO (niente corpo fisico, per non finire nei gruppi di
+  // collisione gia' esistenti): il prezzo e' che nessuna collisione li riguarda finche' non la si
+  // scrive. Il razzo era gia' stato sistemato il 2026-08-24, la granata no — e attraversava i
+  // cumuli come se non ci fossero (segnalato dall'utente il 2026-08-26).
+  {
+    const gsG = avviaLivello(3);
+    equipaggia(gsG, 'granata');
+    // ⚠️ Si USA un cumulo che il livello ha gia' costruito, e ci si mette accanto il giocatore:
+    // fabbricarne uno a mano vorrebbe dire replicare qui le regole di addWaxBlock (colonne, righe,
+    // quota del terreno), cioe' provare una situazione che nel gioco non capita mai.
+    const cumulo = gsG.blocks.getChildren().find((b) => b.active
+      && b.x > 200 && b.x < gsG.worldW - 200);
+    if (!cumulo) {
+      ko('il cerume ferma la granata', 3, 'questo livello non ha cumuli di cerume');
+    } else {
+      gsG.player.x = cumulo.x - 100;
+      gsG.player.y = cumulo.getBounds().top - 30;
+      gsG.facing = 1;
+      window.GameState.granataPronta = 0;
+      gsG.usaLeggendario(1, 0);                 // lanciata in orizzontale verso il cumulo
+      const g = (gsG.granateVive || [])[0];
+      let oltre = false, viva = 0;
+      for (let n = 0; n < 40 && g && g.active; n++) {
+        avanza(gsG, 1);
+        if (!g.active) break;
+        viva++;
+        if (g.x > cumulo.getBounds().right + 4) oltre = true;
+      }
+      if (!oltre) {
+        ok('il cerume ferma la granata', 3,
+          'lanciata contro un cumulo: non lo ha attraversato (' + viva + ' fotogrammi seguiti)');
+      } else {
+        ko('il cerume ferma la granata', 3, 'la granata e passata oltre il cumulo');
+      }
+    }
+  }
+
   // [42] L'ARCO DELLA BASTONATA E' UN QUARTO DI CERCHIO IN TUTTI E DUE I VERSI (2026-08-19).
   // Segnalato dal playtest: colpendo verso sinistra si disegnavano TRE QUARTI di cerchio attorno
   // al personaggio invece del quarto corrispondente al gesto. La causa: per specchiare l'arco gli

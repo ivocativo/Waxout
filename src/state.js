@@ -101,8 +101,8 @@ window.CONFIG = {
 
   // GRANATE: le uniche a MUNIZIONI invece che a tempo (scelta dell'utente): tre per run, e a
   // fine livello se ne recupera una. Cosi' si pensa a QUANDO usarle, non ad aspettare.
-  GRANATE_MAX: 3,
-  RAZZI_MAX: 2,              // i razzi vanno a munizioni come le granate (scelta dell'utente)
+  GRANATE_MAX: 5,
+  RAZZI_MAX: 3,              // i razzi vanno a munizioni come le granate (scelta dell'utente)
   GRANATA_DANNO: 3.2,        // moltiplicatore sul danno corpo a corpo, nel raggio
   GRANATA_RAGGIO: 150,
   GRANATA_MICCIA: 900,       // ms prima dello scoppio (rotola: si puo' anticiparne l'arrivo)
