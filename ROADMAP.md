@@ -202,12 +202,12 @@ Come sono venuti, e cosa e' cambiato rispetto al progetto:
   alternandoli in fretta sembra che avviti (in due dimensioni un cono non puo' ruotare sul proprio
   asse). Piu' trucioli che schizzano ALL'INDIETRO (dicono che sta asportando materiale, non
   passando) e la scia di fantasmi dello scatto offensivo.
-- **GRANATE.** ⚠️ Vinta la regola dell'utente, non la mia proposta: **3 per RUN, e a fine livello
+- **GRANATE.** ⚠️ Vinta la regola dell'utente, non la mia proposta: **5 per RUN** (erano 3, alzate il 2026-08-26) **e a fine livello
   se ne recupera UNA** (io proponevo 3 per livello). E' piu' avara ma piu' interessante: spenderle
   costa davvero, e non conviene svuotare la scorta prima del traguardo. Sono le uniche a
   MUNIZIONI invece che a ricarica, e infatti il pulsante mostra un numero invece della lancetta.
   Non scoppiano al contatto: la miccia obbliga a tirarle dove i nemici SARANNO.
-- **RAZZI a munizioni** (2026-08-24, dall'utente): due per run, uno torna a fine livello, come le
+- **RAZZI a munizioni** (2026-08-24, dall'utente): tre per run, uno torna a fine livello, come le
   granate. Con la ricarica a tempo era il quinto potere "aspetta e ripremi"; a munizioni diventa una
   decisione. E il cerume lo FERMA: attraversarlo lo faceva sembrare un fantasma.
 

@@ -498,11 +498,18 @@ appena spawnato) → filtrare per `x.kind`/`x.swarmling`/`x.fugitive` o distrugg
   ⚠️ I boss: la bomba non li tocca affatto, gli altri quattro li colpiscono scontati
   (`CONFIG.DANNO_BOSS_LEGG`). Uno scontro che si vince premendo un tasto toglie il momento in cui
   il gioco chiede di piu'; un tasto inerte proprio nello scontro sarebbe l'errore opposto.
-  Granate (3 per run) e razzi (2 per run) vanno a MUNIZIONI invece che a ricarica: se ne recupera
+  Granate (5 per run) e razzi (3 per run) vanno a MUNIZIONI invece che a ricarica: se ne recupera
   UNA a fine livello e il pulsante mostra un numero invece della lancetta. Chi ne usa e' scritto
   come DATO (`scorta` in window.LEGGENDARI), non come una serie di "if" sparsi: azzeramento a
   inizio run, ricarica a fine livello, numero sul pulsante e controlli automatici leggono tutti da
   li'.
+  ⚠️ **SIMULATI A MANO = NESSUNA COLLISIONE, finche' non la si scrive.** Granate e razzi non
+  hanno un corpo fisico (scelta voluta: cosi' non finiscono nei gruppi di collisione gia'
+  esistenti e non ne ereditano il comportamento per sbaglio). Il prezzo e' che attraversano
+  tutto finche' qualcuno non aggiunge la regola: e' successo DUE VOLTE, prima col razzo
+  (2026-08-24) e poi con la granata (2026-08-26), segnalate dall'utente con le stesse parole.
+  ⚠️ Il razzo SCOPPIA sul cerume, la granata RIMBALZA: farla esplodere al contatto le
+  toglierebbe il suo carattere, che e' tirarla dove i nemici SARANNO.
   ⚠️ **UN CRONOMETRO CHE NON SI AZZERA RESTA NEL FUTURO.** Le ricariche si misurano su
   `GameState.tempoDiGioco`, che a inizio run torna a zero: un cronometro rimasto indietro dalla run
   precedente si ritrova percio' avanti, e il potere risulta "in ricarica" per tutta la run nuova.
